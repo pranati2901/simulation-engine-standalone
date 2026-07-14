@@ -36,6 +36,8 @@ def startup() -> None:
     Base.metadata.create_all(bind=engine)  # auto-create tables (no Alembic yet)
     load_plugins()      # registers actor/resource types, actions, roles per domain
     load_scenarios()    # imports scenarios/definitions/** so they self-register
+    from .services.custom_actions import load_custom_actions
+    load_custom_actions()  # re-register runtime-authored fault actions (AI authoring)
 
 
 app.include_router(catalog.router, dependencies=[Depends(verify_api_key)])
