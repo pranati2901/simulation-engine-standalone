@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Column, DateTime, String
+from sqlalchemy import JSON, Column, DateTime, Float, String
 
 from .base import Base
 
@@ -33,3 +33,17 @@ class RunORM(Base):
     scenario_id = Column(String, index=True, nullable=False)
     data = Column(JSON, nullable=False)  # full RunRecord pydantic model, as JSON
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class TripwireSession(Base):
+    __tablename__ = "tripwire_sessions"
+
+    id = Column(String, primary_key=True)
+    learner_name = Column(String, nullable=False)
+    scenario_id = Column(String, nullable=False)
+    mode = Column(String, nullable=False)          # practice, assessment, certification
+    status = Column(String, default="active")      # active, completed, failed
+    score = Column(Float, nullable=True)
+    answers = Column(JSON, default=[])
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = Column(DateTime, nullable=True)

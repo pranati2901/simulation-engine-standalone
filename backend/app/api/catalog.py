@@ -21,6 +21,54 @@ def domains():
     return [{"key": p.key, "name": p.name} for p in list_plugins()]
 
 
+@router.get("/assets")
+def all_assets():
+    """All actor types across every registered domain — the Hub expects this at
+    /catalog/assets as a flat list."""
+    results = []
+    for plugin in list_plugins():
+        for at in actor_types_for_domain(plugin.key):
+            results.append({
+                "key": at.key,
+                "name": at.name,
+                "category": at.category,
+                "domain": plugin.key,
+                "default_criticality": at.default_criticality,
+            })
+    return results
+
+
+@router.get("/techniques")
+def all_techniques():
+    """All actions across every registered domain — the Hub expects this at
+    /catalog/techniques (named 'techniques' for GoalCert legacy compat)."""
+    results = []
+    for plugin in list_plugins():
+        for action in actions_for_domain(plugin.key):
+            results.append({
+                "key": action.key,
+                "name": action.name,
+                "category": action.category,
+                "domain": plugin.key,
+                "requires_target": action.requires_target,
+            })
+    return results
+
+
+@router.get("/roles")
+def all_roles():
+    """All roles across every registered domain."""
+    results = []
+    for plugin in list_plugins():
+        for role in plugin.roles():
+            results.append({
+                "name": role.name,
+                "side": role.side,
+                "domain": plugin.key,
+            })
+    return results
+
+
 @router.get("/{domain}/actor-types")
 def actor_types(domain: str):
     if get_plugin(domain) is None:
