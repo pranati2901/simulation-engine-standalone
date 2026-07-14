@@ -35,7 +35,8 @@
     ],
     "additionalDirectories": [
       "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\services\\simulation-engine",
-      "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\hub\\web\\src\\modules\\simulation"
+      "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\hub\\web\\src\\modules\\simulation",
+      "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\hub\\web\\src"
     ]
   }
 }

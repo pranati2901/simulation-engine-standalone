@@ -199,7 +199,20 @@ def run_graph(
             truncated = True
             break
 
-        result = execute(item.scenario, _env_for(item.scenario), config)
+        # The caller's environment applies to the ROOT scenario only.
+        #
+        # run_graph() took an `environment` argument and then never used it — every node,
+        # root included, was run against `scenario.recommended_environment`. So the
+        # `environment` field on POST /runs/graph was dead: you could strip the backup
+        # relay out of the world, post it, and the engine would quietly run the scenario's
+        # own world instead, relay and all. The override silently did nothing.
+        #
+        # Children keep their own recommended_environment: a consequence scenario models a
+        # different part of the world (a platform, a line) and the root's actors are not
+        # its actors. Only the root is the thing the caller is configuring.
+        env = environment if (item.parent_run_id is None and environment is not None) \
+            else _env_for(item.scenario)
+        result = execute(item.scenario, env, config)
         node = RunGraphNode(
             run_id=item.run_id, scenario_id=item.scenario.id, scenario_name=item.scenario.name,
             domain=item.scenario.domain, node_kind=item.scenario.node_kind,
