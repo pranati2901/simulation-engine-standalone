@@ -13,6 +13,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+<<<<<<< HEAD
 from ..engine.catalog.spec import ActionSpec, actions_for_domain
 from ..engine.environment import ActorSpec, EnvironmentSpec
 from ..engine.models.actors import actor_types_for_domain
@@ -29,6 +30,10 @@ from ..plugins.registry import get_plugin
 from ..scenarios.loader import get_scenario, register_scenario, scenarios_for_domain
 from ..services.agent_client import AgentUnavailable, author_scenario_from_nl
 from ..services.custom_actions import persist_custom_action
+=======
+from ..scenarios.loader import get_scenario, scenarios_for_domain
+from ..services.authoring import AuthoringError, author_scenario
+>>>>>>> 3e7eb49b816655a038ada4ceeb094c06cb37d5d6
 
 router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 
@@ -62,6 +67,7 @@ _IMPACTS = {"low", "medium", "high", "critical"}
 
 @router.post("/author")
 async def author(req: AuthorRequest):
+<<<<<<< HEAD
     """Author a runnable scenario from natural language, via the Agentic AI.
 
     The AI writes the spec; everything it references is validated here:
@@ -202,3 +208,20 @@ async def author(req: AuthorRequest):
         "custom_actions": custom_registered,
         "authoring_mode": resp.mode,        # "agent" (LLM wrote it) or "stub" (template)
     }
+=======
+    """Author a runnable Scenario from natural language, and register it.
+
+    The model writes the SPEC — the fault, the decision gate, the objectives, and the
+    cascade triggers. It does not simulate: once registered, engine/graph.py computes
+    the cascade deterministically, exactly as it does for a hand-written scenario. The
+    returned scenario is immediately runnable via POST /runs/graph.
+
+    422 (not 500) on an authoring failure: an unusable prompt or a model that kept
+    naming actions this domain doesn't have is a request problem, not a server fault,
+    and the detail says which.
+    """
+    try:
+        return await author_scenario(req.domain, req.prompt)
+    except AuthoringError as e:
+        raise HTTPException(422, str(e))
+>>>>>>> 3e7eb49b816655a038ada4ceeb094c06cb37d5d6
