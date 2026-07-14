@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulation Hub — Operational Simulation Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
+<style>
+/* ============================================================
+   SIMULATION HUB — light theme
+   Neutrals on white · Blue (live/data/primary) · Amber (event)
+   · Red (critical) · Violet (human/AI)
+   Display: Space Grotesk · Body: Inter · Data: JetBrains Mono
+   ============================================================ */
+:root{
+  --bg:#eef1f7; --panel:#ffffff; --panel-alt:#f6f8fc; --panel-3:#eef1f7;
+  --line:#e4e8f0; --line-soft:#eceff5;
+  --text:#141a27; --text-dim:#59617a; --text-faint:#98a0b5;
+  --cyan:#2f6bf6; --cyan-dim:#1e4fc4; --cyan-soft:rgba(47,107,246,.10);
+  --amber:#d9871a; --amber-soft:rgba(217,135,26,.13);
+  --crimson:#e5484d; --crimson-soft:rgba(229,72,77,.11);
+  --violet:#7c5cff; --violet-soft:rgba(124,92,255,.11);
+  --green:#12a074; --green-soft:rgba(18,160,116,.12);
+  --font:'Inter',system-ui,sans-serif; --display:'Space Grotesk',var(--font); --mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius:10px; --radius-lg:14px;
+  --shadow:0 1px 2px rgba(20,26,40,.04),0 8px 24px rgba(20,26,40,.07);
+  --shadow-lg:0 16px 48px rgba(20,26,40,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+body{
+  background:
+    radial-gradient(1100px 560px at 12% -10%, rgba(47,107,246,.06), transparent 60%),
+    radial-gradient(820px 460px at 98% 4%, rgba(124,92,255,.06), transparent 55%),
+    var(--bg);
+  color:var(--text); font-family:var(--font); font-size:13px; -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#cfd6e4;border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#b6bfd2;background-clip:padding-box}
+.mono{font-family:var(--mono)}
+button{font-family:var(--font);cursor:pointer}
+a{color:inherit;text-decoration:none}
+
+.app{display:grid;grid-template-columns:224px 1fr;height:100vh}
+
+/* ============ SIDEBAR ============ */
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 16px;border-bottom:1px solid var(--line-soft)}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),#5a4bd6);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 5px 14px rgba(47,107,246,.32)}
+.brand-mark svg{width:16px;height:16px}
+.brand-word{display:flex;flex-direction:column;line-height:1.15}
+.brand-name{font-family:var(--display);font-weight:700;font-size:14.5px;letter-spacing:-.01em}
+.brand-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--text-faint);text-transform:uppercase;margin-top:2px}
+
+.domainpack{margin:14px 14px 4px;padding:9px 11px;border-radius:9px;background:var(--panel-alt);border:1px solid var(--line);display:flex;align-items:center;gap:9px;cursor:pointer;transition:.15s}
+.domainpack:hover{border-color:var(--cyan);background:#fff}
+.domainpack-ic{width:24px;height:24px;border-radius:6px;background:var(--amber-soft);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.domainpack-body{min-width:0;flex:1}
+.domainpack-label{font-size:9.5px;color:var(--text-faint);letter-spacing:.04em;font-family:var(--mono)}
+.domainpack-value{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.domainpack i.ri-arrow-down-s-line{color:var(--text-faint);font-size:14px}
+.domainpack-select{width:100%;border:0;background:transparent;font-family:var(--font);font-size:12px;font-weight:600;color:var(--text);outline:none;cursor:pointer;padding:0;margin-top:1px}
+.wb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1100px){.wb-grid{grid-template-columns:1fr}}
+.wb-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;cursor:pointer;transition:.12s;background:#fff}
+.wb-row:hover{border-color:var(--cyan)}
+.wb-row.on{border-color:var(--cyan);background:var(--cyan-soft)}
+.wb-row .nm{font-weight:600;font-size:12.5px}
+.wb-row .mt{font-size:10.5px;color:var(--text-faint);margin-top:1px}
+.wb-row .chk{margin-left:auto;color:var(--cyan);font-weight:800;font-size:14px}
+
+.nav{flex:1;overflow-y:auto;padding:10px 12px}
+.nav-section{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--text-faint);text-transform:uppercase;padding:14px 10px 7px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:8px;color:var(--text-dim);font-size:12.5px;font-weight:500;cursor:pointer;position:relative;margin-bottom:2px;transition:.13s}
+.nav-item:hover{background:var(--panel-alt);color:var(--text)}
+.nav-item.active{background:var(--cyan-soft);color:var(--cyan);font-weight:650}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5px;height:16px;border-radius:2px;background:var(--cyan)}
+.nav-item i{font-size:16.5px;width:18px;text-align:center;flex-shrink:0}
+.nav-item .nb{margin-left:auto;font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px}
+.nb-live{background:var(--crimson-soft);color:var(--crimson)}
+.nb-count{background:var(--panel-3);color:var(--text-dim)}
+
+.sidebar-foot{border-top:1px solid var(--line-soft);padding:12px}
+.enginestat{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;background:var(--panel-alt);border:1px solid var(--line)}
+.enginestat .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-soft);animation:pulse 1.8s infinite}
+.enginestat-txt{flex:1;min-width:0}
+.enginestat-txt b{display:block;font-size:11px;color:var(--text)}
+.enginestat-txt span{display:block;font-size:9.5px;color:var(--text-faint);font-family:var(--mono)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ============ MAIN ============ */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 20px;height:54px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.75);backdrop-filter:blur(10px);flex-shrink:0;z-index:10}
+.crumb{font-size:12px;color:var(--text-faint);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.crumb b{color:var(--text);font-weight:600}
+.crumb i{font-size:13px}
+.topsearch{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:7px 11px;color:var(--text-faint);font-size:12px}
+.topsearch i{font-size:14px}
+.topsearch input{border:0;background:transparent;outline:none;color:var(--text);font-family:var(--font);font-size:12px;flex:1;min-width:0}
+.topsearch kbd{margin-left:auto;font-family:var(--mono);font-size:9.5px;background:var(--panel-3);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--text-faint)}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.simstatus{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;background:var(--cyan-soft);border:1px solid rgba(47,107,246,.28);color:var(--cyan);border-radius:999px;padding:5px 11px;cursor:pointer}
+.simstatus .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1.6s infinite}
+.iconbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--panel-alt);color:var(--text-dim);display:flex;align-items:center;justify-content:center;font-size:15px;position:relative;transition:.13s}
+.iconbtn:hover{background:#fff;color:var(--text);border-color:var(--cyan)}
+.iconbtn .ping{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--crimson);border:2px solid #fff}
+.ai-pill{display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--violet),#5a4bd6);color:#fff;border:0;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:600;box-shadow:0 4px 14px rgba(124,92,255,.32)}
+.ai-pill i{font-size:14px}
+.avatar{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),#5a4bd6);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:11px;font-weight:700}
+
+.workspace{flex:1;overflow-y:auto;padding:20px 24px 40px}
+.view{display:none;animation:fadeIn .25s ease}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.view-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:16px}
+.view-title{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.view-sub{font-size:12px;color:var(--text-faint);margin-top:3px}
+.view-actions{display:flex;gap:8px;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:8px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--text-dim);transition:.13s}
+.btn:hover{background:var(--panel-alt);color:var(--text);border-color:var(--cyan)}
+.btn i{font-size:14px}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#fff;border-color:transparent;font-weight:700;box-shadow:0 3px 10px rgba(47,107,246,.28)}
+.btn-primary:hover{filter:brightness(1.06);color:#fff}
+.btn-violet{background:linear-gradient(135deg,var(--violet),#5a4bd6);color:#fff;border-color:transparent}
+.btn-violet:hover{color:#fff}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
+.card-title{font-family:var(--display);font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.card-title i{color:var(--cyan);font-size:15px}
+.card-title .right{margin-left:auto;font-family:var(--font);font-weight:500;font-size:10.5px;color:var(--text-faint)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9.5px;font-weight:600;padding:2px 8px;border-radius:999px;letter-spacing:.02em}
+.tag-cyan{background:var(--cyan-soft);color:var(--cyan)}
+.tag-amber{background:var(--amber-soft);color:var(--amber)}
+.tag-crimson{background:var(--crimson-soft);color:var(--crimson)}
+.tag-violet{background:var(--violet-soft);color:var(--violet)}
+.tag-green{background:var(--green-soft);color:var(--green)}
+.tag-mute{background:var(--panel-3);color:var(--text-dim)}
+
+/* operational loop ribbon */
+.loop{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:16px;box-shadow:var(--shadow)}
+.loop .step{font-family:var(--mono);font-size:10.5px;padding:5px 10px;border-radius:7px;background:var(--panel-alt);color:var(--text-dim);border:1px solid var(--line)}
+.loop .step.on{background:var(--cyan);color:#fff;border-color:transparent;font-weight:700}
+.loop .arr{color:var(--text-faint);font-size:12px}
+.loop .lbl{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;margin-right:6px}
+
+/* ============ MISSION CONTROL ============ */
+.mc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:15px 16px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.stat::after{content:'';position:absolute;right:-24px;top:-24px;width:84px;height:84px;border-radius:50%;background:var(--stat-glow,rgba(47,107,246,.09));filter:blur(4px)}
+.stat-label{font-size:10.5px;color:var(--text-faint);display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.stat-value{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.02em}
+.stat-value small{font-size:12px;color:var(--text-faint);font-weight:500;margin-left:2px}
+.stat-delta{font-size:10.5px;margin-top:6px;display:flex;align-items:center;gap:4px}
+.stat-delta.up{color:var(--green)}.stat-delta.down{color:var(--crimson)}.stat-delta.warn{color:var(--amber)}
+.mc-body{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.mc-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.simrow{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:8px;transition:.12s}
+.simrow:hover{background:var(--panel-alt)}
+.simrow + .simrow{border-top:1px solid var(--line-soft)}
+.simrow-ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.simrow-body{flex:1;min-width:0}
+.simrow-title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simrow-meta{font-size:10.5px;color:var(--text-faint);margin-top:2px;font-family:var(--mono)}
+.simrow-bar{width:70px;height:5px;border-radius:3px;background:var(--panel-3);overflow:hidden;flex-shrink:0}
+.simrow-bar > div{height:100%;background:linear-gradient(90deg,var(--cyan),var(--cyan-dim))}
+.ai-rec{display:flex;gap:10px;padding:10px;border-radius:9px;background:var(--violet-soft);border:1px solid rgba(124,92,255,.2);margin-bottom:9px}
+.ai-rec:last-child{margin-bottom:0}
+.ai-rec i{color:var(--violet);font-size:16px;margin-top:1px}
+.ai-rec-txt{font-size:11.5px;line-height:1.5;color:var(--text-dim)}
+.ai-rec-txt b{color:var(--text)}
+.health-row{display:flex;align-items:center;gap:10px;padding:7px 0}
+.health-label{font-size:11.5px;color:var(--text-dim);width:130px;flex-shrink:0}
+.health-bar{flex:1;height:6px;border-radius:3px;background:var(--panel-3);overflow:hidden}
+.health-bar > div{height:100%;border-radius:3px}
+.health-val{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);width:34px;text-align:right}
+.incident{display:flex;gap:9px;align-items:flex-start;padding:8px 0}
+.incident + .incident{border-top:1px solid var(--line-soft)}
+.incident-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.incident-txt{font-size:11.5px;color:var(--text-dim);line-height:1.5;flex:1}
+.incident-txt b{color:var(--text)}
+.incident-time{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);flex-shrink:0}
+.incident .conv{font-size:9.5px;color:var(--cyan);cursor:pointer;font-weight:600;white-space:nowrap}
+
+/* ============ SCENARIO LIBRARY ============ */
+.lib-layout{display:grid;grid-template-columns:220px 1fr;gap:16px}
+.filter-group{margin-bottom:18px}
+.filter-title{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:9px}
+.filter-chip{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border-radius:7px;font-size:11.5px;color:var(--text-dim);cursor:pointer;margin-bottom:2px}
+.filter-chip:hover{background:var(--panel-alt)}
+.filter-chip.on{background:var(--cyan-soft);color:var(--cyan);font-weight:600}
+.filter-chip span.n{font-family:var(--mono);font-size:9.5px;color:var(--text-faint)}
+.lib-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.lib-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:1200px){.lib-grid{grid-template-columns:repeat(2,1fr)}}
+.scenario-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.scenario-card:hover{border-color:var(--cyan);transform:translateY(-2px);box-shadow:0 10px 26px rgba(20,26,40,.12)}
+.scenario-card-top{display:flex;align-items:center;justify-content:space-between}
+.sev-dot{width:8px;height:8px;border-radius:50%}
+.scenario-card-title{font-size:13px;font-weight:600;line-height:1.35}
+.scenario-card-desc{font-size:11px;color:var(--text-faint);line-height:1.5;flex:1}
+.scenario-card-tags{display:flex;gap:5px;flex-wrap:wrap}
+.scenario-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:8px;border-top:1px solid var(--line-soft)}
+.chain-badge{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9.5px;color:var(--amber)}
+.scenario-card-foot .open{font-size:10.5px;color:var(--cyan);font-weight:600}
+
+/* ============ SCENARIO BUILDER ============ */
+.ai-describe{background:linear-gradient(135deg,rgba(124,92,255,.07),rgba(47,107,246,.05));border:1px solid rgba(124,92,255,.22);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px}
+.ai-describe .head{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:700;font-size:13px;margin-bottom:10px}
+.ai-describe .head i{color:var(--violet)}
+.ai-describe textarea{width:100%;min-height:58px;resize:vertical;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-family:var(--font);font-size:12.5px;color:var(--text);background:#fff;outline:none}
+.ai-describe textarea:focus{border-color:var(--violet)}
+.ai-describe .row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.ex-chip{font-size:10.5px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--text-dim);cursor:pointer}
+.ex-chip:hover{border-color:var(--violet);color:var(--violet)}
+.builder-layout{display:grid;grid-template-columns:1fr 272px;gap:14px;height:calc(100vh - 440px);min-height:360px}
+.canvas-hint{position:absolute;top:12px;right:12px;z-index:5;font-size:10px;color:var(--text-faint);background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:7px;padding:6px 10px;backdrop-filter:blur(6px)}
+.insp-actions{display:flex;gap:8px;margin-top:14px}
+.insp-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:650;padding:9px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--text-dim)}
+.insp-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.insp-btn.pri{background:var(--cyan);color:#fff;border-color:transparent}.insp-btn.pri:hover{color:#fff;filter:brightness(1.06)}
+.insp-btn.danger{color:var(--crimson);border-color:rgba(229,72,77,.28)}.insp-btn.danger:hover{background:var(--crimson-soft);color:var(--crimson);border-color:var(--crimson)}
+.out-strip{display:flex;gap:10px;flex-wrap:wrap}
+.out-card{flex:1;min-width:160px;border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:10px;padding:11px 13px;background:var(--panel-alt)}
+.out-card .ot{font-weight:650;font-size:12.5px}.out-card .os{font-size:10.5px;color:var(--text-faint);margin-top:3px}
+.sum-chip{display:flex;flex-direction:column}
+.sum-chip .sv{font-family:var(--display);font-size:22px;font-weight:700;line-height:1}
+.sum-chip .sl{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;margin-top:5px}
+/* ===== integrated stage console ===== */
+.console3{display:grid;grid-template-columns:300px 1fr 306px;gap:14px;align-items:start}
+@media(max-width:1300px){.console3{grid-template-columns:270px 1fr}}
+.stage{border:1px solid var(--line);border-radius:11px;background:#fff;padding:12px;margin-bottom:10px}
+.stage .sh{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.stage .sno{width:22px;height:22px;border-radius:50%;background:var(--cyan);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stage .stitle{font-weight:650;font-size:12px;flex:1}
+.stage .del{color:var(--crimson);cursor:pointer;font-size:15px}
+.stage select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:12px;background:#fff;margin-bottom:9px;color:var(--text)}
+.stage .cchips{display:flex;flex-wrap:wrap;gap:5px}
+.stage .cc{font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);cursor:pointer;color:var(--text-dim);font-weight:600}
+.stage .cc.on{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+.stage .rd{margin-top:10px}.stage .rd label{font-size:10px;color:var(--text-dim);font-weight:600}
+.seqarrow{text-align:center;color:var(--text-faint);font-size:15px;margin:-4px 0 6px}
+.addstage{width:100%;border:1.5px dashed var(--line);border-radius:10px;background:var(--panel-alt);color:var(--text-dim);padding:11px;font-weight:650;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.addstage:hover{border-color:var(--cyan);color:var(--cyan)}
+.gauge2{display:flex;align-items:center;gap:14px}
+.gauge2 .q{font-weight:750;font-size:14px}.gauge2 .ql{font-family:var(--mono);font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+.imp{margin:9px 0}.imp .t{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}.imp .t .v{font-family:var(--mono);font-weight:700}
+.imp .b{height:8px;border-radius:5px;background:var(--panel-3);overflow:hidden}.imp .b>div{height:100%;border-radius:5px;transition:width .5s}
+.simtl{position:relative;padding-left:58px}
+.simtl .r{position:relative;padding:7px 0 7px 16px;border-left:2px solid var(--line);transition:opacity .2s}
+.simtl .r:before{content:'';position:absolute;left:-7px;top:12px;width:11px;height:11px;border-radius:50%;background:#fff;border:2.5px solid var(--text-dim)}
+.simtl .r .tm{position:absolute;left:-58px;top:8px;width:46px;text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--text-faint)}
+.simtl .r .ti{font-weight:650;font-size:12px}.simtl .r .td{font-size:10px;color:var(--text-dim)}
+.canvas-wrap.connect-on{outline:2px solid var(--cyan);outline-offset:-2px}
+.modal{position:fixed;inset:0;background:rgba(20,24,40,.42);z-index:60;display:none;align-items:center;justify-content:center;padding:32px}
+.modal.open{display:flex}
+.modal-c{background:var(--bg);border-radius:16px;width:100%;max-width:900px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(20,24,40,.3)}
+.modal-h{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0}
+.modal-h h3{font-family:var(--font);font-size:16px}
+.cmpm{display:flex;align-items:center;gap:12px;padding:10px 0}.cmpm+.cmpm{border-top:1px solid var(--line)}
+.cmpm .ml{flex:1;font-size:12px;color:var(--text-dim);font-weight:600}.cmpm .a{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text-faint);width:74px;text-align:right}
+.cmpm .arr{color:var(--text-faint)}.cmpm .b{font-family:var(--mono);font-size:16px;font-weight:800;width:74px;text-align:right}
+.si-field{margin-bottom:9px}.si-field .l{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);text-transform:uppercase;margin-bottom:4px}
+.si-field .v{background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
+.canvas-wrap{background:
+  linear-gradient(var(--line-soft) 1px,transparent 1px) 0 0/26px 26px,
+  linear-gradient(90deg,var(--line-soft) 1px,transparent 1px) 0 0/26px 26px,
+  var(--panel-alt);
+  border:1px solid var(--line);border-radius:var(--radius-lg);position:relative;overflow:hidden}
+.canvas-toolbar{position:absolute;top:12px;left:12px;display:flex;gap:6px;z-index:5}
+.canvas-toolbar button{width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.92);border:1px solid var(--line);color:var(--text-dim);display:flex;align-items:center;justify-content:center;font-size:14px;backdrop-filter:blur(6px)}
+.canvas-toolbar button:hover{color:var(--cyan);border-color:var(--cyan)}
+.canvas-legend{position:absolute;bottom:12px;left:12px;display:flex;gap:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:10px;color:var(--text-faint);backdrop-filter:blur(6px)}
+.canvas-legend span{display:flex;align-items:center;gap:5px}
+.canvas-legend .sw{width:9px;height:9px;border-radius:3px}
+.inspector{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px;overflow-y:auto;box-shadow:var(--shadow)}
+.insp-field{margin-bottom:12px}
+.insp-label{font-size:9.5px;color:var(--text-faint);margin-bottom:5px;font-family:var(--mono);letter-spacing:.03em;text-transform:uppercase}
+.insp-value{font-size:12px;color:var(--text);background:var(--panel-alt);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+.insp-bar{height:5px;border-radius:3px;background:var(--panel-3);overflow:hidden;margin-top:5px}
+.insp-bar>div{height:100%}
+.node-label{font-family:var(--font);font-size:11px;fill:var(--text);font-weight:600}
+.node-sub{font-family:var(--mono);font-size:8.5px;fill:var(--text-faint)}
+.edge-path{fill:none;stroke:#c7cede;stroke-width:1.6}
+.edge-flow{fill:none;stroke:var(--cyan);stroke-width:1.7;stroke-dasharray:5 7;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.gnode{cursor:grab}.gnode.dragging{cursor:grabbing}
+
+/* ============ SIMULATION ============ */
+.sim-layout{display:grid;grid-template-columns:1fr 288px;gap:14px}
+.sim-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.playbar{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:10px 16px;box-shadow:var(--shadow)}
+.playbtn{width:34px;height:34px;border-radius:8px;background:var(--panel-alt);border:1px solid var(--line);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:15px}
+.playbtn.main{background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#fff;width:38px;height:38px;font-size:17px;border-color:transparent}
+.playbtn:hover{filter:brightness(1.05);border-color:var(--cyan)}
+.play-scrub{flex:1;height:6px;border-radius:3px;background:var(--panel-3);position:relative;cursor:pointer}
+.play-scrub>div{position:absolute;left:0;top:0;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--amber))}
+.play-scrub .knob{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:var(--cyan);border:2px solid #fff;transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--cyan-soft)}
+.play-time{font-family:var(--mono);font-size:11px;color:var(--text-dim);white-space:nowrap}
+.speed-seg{display:flex;gap:2px;background:var(--panel-alt);border:1px solid var(--line);border-radius:7px;padding:2px}
+.speed-seg button{font-family:var(--mono);font-size:10px;padding:5px 9px;border-radius:5px;background:transparent;border:0;color:var(--text-faint)}
+.speed-seg button.on{background:var(--cyan);color:#fff}
+.timeline-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
+.timeline-track{position:relative;height:150px;margin-top:10px}
+.timeline-axis{position:absolute;left:0;right:0;top:50%;height:2px;background:var(--line)}
+.tl-event{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;border:2px solid #fff;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12);transition:opacity .2s}
+.tl-event::after{content:attr(data-label);position:absolute;top:-30px;left:50%;transform:translateX(-50%);font-size:9.5px;font-family:var(--mono);white-space:nowrap;color:var(--text-faint);opacity:0;transition:.15s;pointer-events:none}
+.tl-event:hover::after{opacity:1;color:var(--text)}
+.tl-now{position:absolute;top:0;width:2px;height:150px;background:var(--cyan);box-shadow:0 0 8px rgba(47,107,246,.5);transform:translateX(-50%);z-index:2}
+.feed{max-height:250px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.feed-item{display:flex;gap:9px;align-items:flex-start;padding:8px 9px;border-radius:8px;background:var(--panel-alt);border:1px solid var(--line-soft)}
+.feed-ic{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+.feed-txt{font-size:11.5px;color:var(--text-dim);line-height:1.5;flex:1}
+.feed-txt b{color:var(--text)}
+.feed-time{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);flex-shrink:0;padding-top:2px}
+.sim-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.actor-row{display:flex;align-items:center;gap:9px;padding:7px 0}
+.actor-row+.actor-row{border-top:1px solid var(--line-soft)}
+.actor-av{width:28px;height:28px;border-radius:7px;background:var(--panel-3);color:var(--text-dim);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.actor-body{flex:1;min-width:0}
+.actor-name{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actor-task{font-size:10px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-mini{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.kpi-mini-label{font-size:11px;color:var(--text-dim)}
+.kpi-mini-val{font-family:var(--mono);font-size:12px;font-weight:600}
+
+/* ============ REPORTS ============ */
+.exec-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px}
+.exec-metric{display:flex;flex-direction:column;gap:3px;padding:13px;border-radius:11px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+.exec-metric-label{font-size:10px;color:var(--text-faint)}
+.exec-metric-val{font-family:var(--display);font-size:20px;font-weight:700}
+.exec-metric-sub{font-size:9.5px;color:var(--text-faint)}
+.rep-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+.riskmatrix{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:3px;height:220px}
+.riskcell{border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700}
+.rec-item{display:flex;gap:10px;padding:10px 0;align-items:flex-start}
+.rec-item+.rec-item{border-top:1px solid var(--line-soft)}
+.rec-num{width:20px;height:20px;border-radius:6px;background:var(--cyan-soft);color:var(--cyan);font-family:var(--mono);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rec-txt{font-size:11.5px;color:var(--text-dim);line-height:1.5;flex:1}
+.rec-txt b{color:var(--text)}
+.split-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pattern-row{display:flex;align-items:center;gap:11px;padding:9px 0}
+.pattern-row+.pattern-row{border-top:1px solid var(--line-soft)}
+.pattern-freq{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--amber);width:40px;text-align:center;flex-shrink:0}
+.pattern-body{flex:1;min-width:0}
+.pattern-title{font-size:12px;font-weight:600}
+.pattern-sub{font-size:10.5px;color:var(--text-faint)}
+
+/* ============ KNOWLEDGE ============ */
+.kh-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lesson-item{padding:11px;border-radius:9px;background:var(--panel-alt);border:1px solid var(--line-soft);margin-bottom:8px}
+.lesson-item:last-child{margin-bottom:0}
+.lesson-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;gap:8px}
+.lesson-title{font-size:11.5px;font-weight:600}
+.lesson-txt{font-size:11px;color:var(--text-faint);line-height:1.55}
+.evo-wrap{overflow-x:auto}
+
+.simple-list{display:flex;flex-direction:column}
+.simple-list .r{display:flex;align-items:center;gap:12px;padding:12px 0}
+.simple-list .r+.r{border-top:1px solid var(--line-soft)}
+.simple-list .ic{width:36px;height:36px;border-radius:9px;background:var(--cyan-soft);color:var(--cyan);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.toggle{width:38px;height:22px;border-radius:999px;background:var(--panel-3);position:relative;cursor:pointer;flex-shrink:0;transition:.15s}
+.toggle.on{background:var(--cyan)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{left:18px}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--text);color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);z-index:80;opacity:0;transition:.24s;pointer-events:none;display:flex;align-items:center;gap:9px}
+.toast i{color:var(--cyan)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12L10 6L14 10L20 4" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="4" r="1.6" fill="#fff"/><circle cx="4" cy="12" r="1.6" fill="#fff"/></svg></div>
+      <div class="brand-word"><div class="brand-name">Simulation Hub</div><div class="brand-tag">NextXR Platform</div></div>
+    </div>
+    <div class="domainpack">
+      <div class="domainpack-ic"><i class="ri-plane-line" id="domainIcon"></i></div>
+      <div class="domainpack-body"><div class="domainpack-label">ACTIVE DOMAIN PACK</div><select id="domainSelect" class="domainpack-select" onchange="setDomain(this.value)"></select></div>
+      <i class="ri-arrow-down-s-line"></i>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">Workspaces</div>
+      <div class="nav-item active" data-view="mission"><i class="ri-radar-line"></i>Mission Control</div>
+      <div class="nav-item" data-view="library"><i class="ri-stack-line"></i>Scenario &amp; Faults<span class="nb nb-count" id="libCount">18</span></div>
+      <div class="nav-item" data-view="builder"><i class="ri-git-branch-line"></i>Scenario Builder</div>
+      <div class="nav-item" data-view="world"><i class="ri-earth-line"></i>World Builder</div>
+      <div class="nav-item" data-view="sim"><i class="ri-pulse-line"></i>Simulation<span class="nb nb-live">LIVE</span></div>
+      <div class="nav-item" data-view="reports"><i class="ri-file-chart-line"></i>Reports</div>
+      <div class="nav-item" data-view="knowledge"><i class="ri-brain-line"></i>Knowledge Hub</div>
+      <div class="nav-section">System</div>
+      <div class="nav-item" data-view="packs"><i class="ri-plug-line"></i>Domain Packs</div>
+      <div class="nav-item" data-view="settings"><i class="ri-settings-4-line"></i>Settings</div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="enginestat"><div class="dot"></div><div class="enginestat-txt"><b>Engine Online</b><span>v0.9.0 · deterministic core</span></div></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><i class="ri-radar-line"></i> Simulation Hub <i class="ri-arrow-right-s-line"></i> <b id="crumbView">Mission Control</b></div>
+      <div class="topsearch"><i class="ri-search-line"></i><input id="globalSearch" placeholder="Search scenarios, faults, reports…" oninput="onSearch(this.value)"><kbd>Ctrl K</kbd></div>
+      <div class="topbar-right">
+        <div class="simstatus" onclick="nav('sim')"><div class="dot"></div> SIM-2291 RUNNING</div>
+        <button class="iconbtn" onclick="toast('No new notifications','ri-notification-3-line')"><i class="ri-notification-3-line"></i><span class="ping"></span></button>
+        <button class="ai-pill" onclick="nav('builder');toast('AI Copilot ready — describe a scenario','ri-sparkling-2-fill')"><i class="ri-sparkling-2-fill"></i> AI Copilot</button>
+        <div class="avatar">PS</div>
+      </div>
+    </header>
+
+    <div class="workspace" id="workspace">
+
+      <!-- MISSION CONTROL -->
+      <section class="view active" id="view-mission">
+        <div class="view-head">
+          <div><div class="view-title">Mission Control</div><div class="view-sub">Operational readiness across every simulation, scenario and domain pack.</div></div>
+          <div class="view-actions"><button class="btn" onclick="toast('Dashboard exported (demo)','ri-download-2-line')"><i class="ri-download-2-line"></i>Export</button><button class="btn btn-primary" onclick="nav('library')"><i class="ri-add-line"></i>New Simulation</button></div>
+        </div>
+        <div class="loop">
+          <span class="lbl">Operational loop</span>
+          <span class="step">Assess</span><span class="arr">→</span><span class="step">Train</span><span class="arr">→</span>
+          <span class="step on">Simulate</span><span class="arr">→</span><span class="step">Deploy</span><span class="arr">→</span>
+          <span class="step">Assist</span><span class="arr">→</span><span class="step">Observe</span><span class="arr">→</span><span class="step">Improve</span>
+        </div>
+        <div class="mc-grid">
+          <div class="stat" style="--stat-glow:rgba(18,160,116,.1)"><div class="stat-label"><i class="ri-shield-check-line"></i> Readiness Score</div><div class="stat-value">87<small>/100</small></div><div class="stat-delta up"><i class="ri-arrow-up-line"></i> +4.2 vs last cycle</div></div>
+          <div class="stat" style="--stat-glow:rgba(217,135,26,.1)"><div class="stat-label"><i class="ri-play-circle-line"></i> Active Simulations</div><div class="stat-value">6</div><div class="stat-delta warn"><i class="ri-error-warning-line"></i> 2 awaiting decision</div></div>
+          <div class="stat" style="--stat-glow:rgba(124,92,255,.1)"><div class="stat-label"><i class="ri-git-branch-line"></i> Scenario Chains Fired</div><div class="stat-value">318</div><div class="stat-delta up"><i class="ri-arrow-up-line"></i> +52 this week</div></div>
+          <div class="stat" style="--stat-glow:rgba(229,72,77,.1)"><div class="stat-label"><i class="ri-alarm-warning-line"></i> Open Incidents</div><div class="stat-value">3</div><div class="stat-delta down"><i class="ri-arrow-down-line"></i> -1 vs yesterday</div></div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-col">
+            <div class="card">
+              <div class="card-title"><i class="ri-play-circle-line"></i>Running &amp; Recent Simulations<span class="right">click to open</span></div>
+              <div class="simrow" onclick="nav('sim')"><div class="simrow-ic" style="background:var(--cyan-soft);color:var(--cyan)"><i class="ri-plane-line"></i></div><div class="simrow-body"><div class="simrow-title">Hydraulic Leak Cascade — Fleet A320 #4471</div><div class="simrow-meta">Aerospace · t+02:14:08 · 9 events fired</div></div><div class="simrow-bar"><div style="width:64%"></div></div><span class="tag tag-cyan">RUNNING</span></div>
+              <div class="simrow" onclick="nav('sim')"><div class="simrow-ic" style="background:var(--amber-soft);color:var(--amber)"><i class="ri-train-line"></i></div><div class="simrow-body"><div class="simrow-title">Heatwave → Track Buckling → Service Suspension</div><div class="simrow-meta">Railway · t+00:41:52 · 5 events fired</div></div><div class="simrow-bar"><div style="width:38%"></div></div><span class="tag tag-amber">DECISION PENDING</span></div>
+              <div class="simrow" onclick="nav('sim')"><div class="simrow-ic" style="background:var(--violet-soft);color:var(--violet)"><i class="ri-hospital-line"></i></div><div class="simrow-body"><div class="simrow-title">Power Fluctuation → MRI Shutdown → ER Overload</div><div class="simrow-meta">Healthcare · t+01:05:33 · 7 events fired</div></div><div class="simrow-bar"><div style="width:81%"></div></div><span class="tag tag-cyan">RUNNING</span></div>
+              <div class="simrow" onclick="nav('reports')"><div class="simrow-ic" style="background:var(--panel-3);color:var(--text-dim)"><i class="ri-shield-line"></i></div><div class="simrow-body"><div class="simrow-title">GPS Spoofing → Nav Loss → Emergency Extraction</div><div class="simrow-meta">Defence · Completed 14m ago · Report ready</div></div><div class="simrow-bar"><div style="width:100%"></div></div><span class="tag tag-mute">COMPLETE</span></div>
+              <div class="simrow" onclick="nav('reports')"><div class="simrow-ic" style="background:var(--panel-3);color:var(--text-dim)"><i class="ri-settings-3-line"></i></div><div class="simrow-body"><div class="simrow-title">Coolant Failure → Pump Overheat → Line Stoppage</div><div class="simrow-meta">Manufacturing · Completed 41m ago · Report ready</div></div><div class="simrow-bar"><div style="width:100%"></div></div><span class="tag tag-mute">COMPLETE</span></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="ri-heart-pulse-line"></i>System Health</div>
+              <div class="health-row"><div class="health-label">Simulation Engine</div><div class="health-bar"><div style="width:96%;background:var(--green)"></div></div><div class="health-val">96%</div></div>
+              <div class="health-row"><div class="health-label">State Store</div><div class="health-bar"><div style="width:99%;background:var(--green)"></div></div><div class="health-val">99%</div></div>
+              <div class="health-row"><div class="health-label">Scenario Chain Graph</div><div class="health-bar"><div style="width:88%;background:var(--green)"></div></div><div class="health-val">88%</div></div>
+              <div class="health-row"><div class="health-label">KPI &amp; Report Engine</div><div class="health-bar"><div style="width:91%;background:var(--green)"></div></div><div class="health-val">91%</div></div>
+              <div class="health-row"><div class="health-label">Knowledge Capture</div><div class="health-bar"><div style="width:73%;background:var(--amber)"></div></div><div class="health-val">73%</div></div>
+              <div class="health-row"><div class="health-label">Domain Pack: Defence</div><div class="health-bar"><div style="width:54%;background:var(--crimson)"></div></div><div class="health-val">54%</div></div>
+            </div>
+          </div>
+          <div class="mc-col">
+            <div class="card">
+              <div class="card-title"><i class="ri-sparkling-2-fill" style="color:var(--violet)"></i>AI Recommendations</div>
+              <div class="ai-rec"><i class="ri-git-branch-line"></i><div class="ai-rec-txt"><b>Fleet A320 sim</b> is trending toward the same branch that caused the March gate-congestion incident. Consider injecting an early maintenance intervention node.</div></div>
+              <div class="ai-rec"><i class="ri-file-add-line"></i><div class="ai-rec-txt">3 completed simulations share a fault pattern. Promote <b>"Coolant Efficiency Drop"</b> to the shared scenario library.</div></div>
+              <div class="ai-rec"><i class="ri-alarm-warning-line"></i><div class="ai-rec-txt"><b>Defence pack</b> health is degraded — likely stale actor decision models. Recommend a re-train pass.</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="ri-error-warning-line"></i>Recent Incidents<span class="right">every incident → a scenario</span></div>
+              <div class="incident"><div class="incident-dot" style="background:var(--crimson)"></div><div class="incident-txt"><b>Sensor drift</b> unresolved on Asset TRK-118 for 3 cycles</div><span class="conv" onclick="convertIncident('Sensor drift')">+ scenario</span><div class="incident-time">12m</div></div>
+              <div class="incident"><div class="incident-dot" style="background:var(--amber)"></div><div class="incident-txt">Operator override rate up <b>+18%</b> in Railway pack</div><span class="conv" onclick="convertIncident('Operator override spike')">+ scenario</span><div class="incident-time">1h</div></div>
+              <div class="incident"><div class="incident-dot" style="background:var(--amber)"></div><div class="incident-txt">Spare parts shortage predicted within <b>4 sims</b></div><span class="conv" onclick="convertIncident('Spare parts shortage')">+ scenario</span><div class="incident-time">3h</div></div>
+              <div class="incident"><div class="incident-dot" style="background:var(--cyan)"></div><div class="incident-txt">New scenario candidate auto-generated from AR call #5521</div><div class="incident-time">6h</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="ri-calendar-schedule-line"></i>Upcoming Simulations</div>
+              <div class="simrow" style="padding-left:0"><div class="simrow-body"><div class="simrow-title">Q3 Defence Readiness Exercise</div><div class="simrow-meta">Scheduled · Tomorrow 09:00</div></div></div>
+              <div class="simrow" style="padding-left:0"><div class="simrow-body"><div class="simrow-title">Monsoon Rail Disruption Chain</div><div class="simrow-meta">Scheduled · Fri 14:00</div></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENARIO & FAULTS (library) -->
+      <section class="view" id="view-library">
+        <div class="view-head">
+          <div><div class="view-title">Scenario &amp; Faults</div><div class="view-sub" id="libSub">Fault library — every injectable fault and its cascade chain, versioned and linked.</div></div>
+          <div class="view-actions"><button class="btn" onclick="nav('builder')"><i class="ri-sparkling-2-line"></i>AI Generate</button><button class="btn btn-primary" onclick="nav('builder')"><i class="ri-add-line"></i>New Scenario</button></div>
+        </div>
+        <div class="lib-layout">
+          <div>
+            <div class="filter-group"><div class="filter-title">Domain</div><div id="fltDomain"></div></div>
+            <div class="filter-group"><div class="filter-title">Severity</div><div id="fltSev"></div></div>
+            <div class="filter-group"><div class="filter-title">Category</div><div id="fltCat"></div></div>
+            <div class="filter-group"><div class="filter-title">Source</div><div id="fltSrc"></div></div>
+          </div>
+          <div>
+            <div class="lib-toolbar">
+              <div class="topsearch" style="max-width:none;flex:1"><i class="ri-search-line"></i><input id="libSearch" placeholder="Filter faults…" oninput="renderLibrary()"></div>
+              <button class="btn" onclick="clearFilters()"><i class="ri-close-circle-line"></i>Clear</button>
+            </div>
+            <div class="lib-grid" id="scenarioGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCENARIO BUILDER -->
+      <section class="view" id="view-builder">
+        <div class="view-head">
+          <div><div class="view-title">Scenario Builder</div><div class="view-sub">Compose the situation as a <b>sequence of stages</b> — event A (with its conditions), then event B, then the outcome. The cascade compounds across stages.</div></div>
+          <div class="view-actions">
+            <button class="btn" id="connectBtn" onclick="toggleConnect()"><i class="ri-links-line"></i>Connect blocks</button>
+            <button class="btn btn-primary" onclick="runSimulation()"><i class="ri-play-fill"></i>Run Simulation</button>
+          </div>
+        </div>
+        <div class="console3">
+          <div>
+            <div class="card"><div class="card-title"><i class="ri-file-text-line"></i>Scenario</div>
+              <input type="text" id="scnName" value="Peak-Hour Signal Failure" style="width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line2);font-size:12.5px;color:var(--text)"></div>
+            <div class="card"><div class="card-title"><i class="ri-stack-line"></i>Stage sequence<span class="right">A → B → C</span></div>
+              <div id="stageList"></div>
+              <button class="addstage" onclick="addStage()"><i class="ri-add-line"></i> Add stage — then this happens next</button>
+              <div class="tiny muted" style="margin-top:9px;font-size:10.5px">Each stage is its own event with its own conditions. Stage B inherits Stage A's degraded state.</div></div>
+          </div>
+          <div class="card" style="padding:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div class="card-title" style="margin:0"><i class="ri-git-branch-line"></i>Cascade map</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn sm" onclick="addBlock()" title="Add block"><i class="ri-add-box-line"></i></button>
+                <button class="btn sm" onclick="deleteBlock()" title="Delete"><i class="ri-delete-bin-line"></i></button>
+                <button class="btn sm" onclick="zoomG(0.12)"><i class="ri-zoom-in-line"></i></button>
+                <button class="btn sm" onclick="zoomG(-0.12)"><i class="ri-zoom-out-line"></i></button>
+                <button class="btn sm" onclick="fitG()"><i class="ri-focus-3-line"></i></button>
+              </div>
+            </div>
+            <div class="canvas-wrap" id="canvasWrap" style="height:452px">
+              <div class="canvas-hint" id="cHint"><i class="ri-drag-move-2-line"></i> drag · click to inspect · use “Connect blocks” to draw arrows</div>
+              <svg viewBox="0 0 900 560" width="100%" height="100%" id="builderSvg"></svg>
+              <div class="canvas-legend"><span><div class="sw" style="background:var(--amber)"></div>Environmental</span><span><div class="sw" style="background:var(--crimson)"></div>Equipment</span><span><div class="sw" style="background:var(--violet)"></div>Human</span><span><div class="sw" style="background:var(--cyan)"></div>Outcome</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="card"><div class="card-title"><i class="ri-shield-check-line"></i>Predicted readiness</div><div id="rdGauge"></div></div>
+            <div class="card"><div class="card-title"><i class="ri-bar-chart-box-line"></i>Predicted impact</div><div id="predImpact"></div></div>
+            <div class="card" id="inspector"></div>
+          </div>
+        </div>
+        <div class="card" id="outcomesCard" style="margin-top:14px"></div>
+      </section>
+
+      <!-- SIMULATION -->
+      <section class="view" id="view-sim">
+        <div class="view-head">
+          <div><div class="view-title">Simulation</div><div class="view-sub" id="simSub">Run a scenario in the Builder to see results here.</div></div>
+          <div class="view-actions">
+            <button class="btn" onclick="openCompare()"><i class="ri-scales-3-line"></i>Compare what-if</button>
+            <button class="btn btn-primary" onclick="saveSimulation()"><i class="ri-save-3-line"></i>Save simulation</button>
+          </div>
+        </div>
+        <div class="playbar" id="simPlaybar" style="margin-bottom:14px">
+          <button class="playbtn main" id="simPlay" onclick="simTogglePlay()"><i class="ri-play-fill"></i></button>
+          <button class="playbtn" onclick="simRestartPlay()"><i class="ri-restart-line"></i></button>
+          <div class="play-scrub" id="simScrub" onclick="simSeek(event)"><div id="simFill" style="width:100%"></div><div class="knob" id="simKnob" style="left:100%"></div></div>
+          <div class="play-time" id="simTime">—</div>
+        </div>
+        <div class="console3" style="grid-template-columns:1fr 320px">
+          <div>
+            <div class="card" style="padding:14px">
+              <div class="card-title"><i class="ri-git-branch-line"></i>Cascade — severity map<span class="right" id="simState"></span></div>
+              <div class="canvas-wrap" id="simCanvasWrap" style="height:360px"><svg viewBox="0 0 900 560" width="100%" height="100%" id="simSvg"></svg>
+                <div class="canvas-legend" id="simLegend"></div></div>
+            </div>
+            <div class="card" style="margin-top:14px"><div class="card-title"><i class="ri-time-line"></i>Live event timeline<span class="right" id="simDur"></span></div><div id="simTimeline"></div></div>
+          </div>
+          <div>
+            <div class="card"><div class="card-title"><i class="ri-bar-chart-box-line"></i>Impact dashboard</div><div id="simImpact"></div></div>
+            <div class="card"><div class="card-title"><i class="ri-focus-3-line"></i>Root-cause analysis</div><div id="simRoot"></div></div>
+            <div class="card"><div class="card-title"><i class="ri-lightbulb-flash-line"></i>Recommended interventions</div><div id="simInterv"></div></div>
+            <div class="card" id="simInspector"><div class="empty-hint">Click any node to inspect it.</div></div>
+          </div>
+        </div>
+      </section>
+      <div class="modal" id="compareModal"><div class="modal-c">
+        <div class="modal-h"><h3>What-if Comparison</h3><button class="btn sm" onclick="closeCompare()"><i class="ri-close-line"></i></button></div>
+        <div id="compareBody"></div>
+      </div></div>
+
+      <!-- WORLD BUILDER -->
+      <section class="view" id="view-world"></section>
+
+      <!-- REPORTS -->
+      <section class="view" id="view-reports">
+        <div class="view-head">
+          <div><div class="view-title">Reports</div><div class="view-sub" id="repSub">Run a simulation to generate a report.</div></div>
+          <div class="view-actions"><button class="btn" onclick="exportRunJson()"><i class="ri-braces-line"></i>Export JSON</button><button class="btn btn-primary" onclick="openCompare()"><i class="ri-git-compare-line"></i>Compare Simulations</button></div>
+        </div>
+        <div class="exec-metrics" id="repMetrics"></div>
+        <div class="rep-grid">
+          <div class="card"><div class="card-title"><i class="ri-node-tree"></i>Root Cause &amp; Consequence Chain</div><div class="evo-wrap"><svg viewBox="0 0 760 230" width="100%" height="230" id="evoSvgReports"></svg></div></div>
+          <div class="card"><div class="card-title"><i class="ri-grid-line"></i>Risk Matrix<span class="right">impact × likelihood</span></div><div class="riskmatrix" id="riskMatrix"></div></div>
+        </div>
+        <div class="split-row">
+          <div class="card">
+            <div class="card-title"><i class="ri-lightbulb-flash-line"></i>Recommendations<span class="right">derived from fired triggers</span></div>
+            <div id="repRecs"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="ri-file-shield-2-line"></i>Evidence Chain<span class="right">from the engine</span></div>
+            <div id="repEvidence"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KNOWLEDGE HUB -->
+      <section class="view" id="view-knowledge">
+        <div class="view-head">
+          <div><div class="view-title">Knowledge Hub</div><div class="view-sub">Every simulation feeds this. Nothing generated is ever discarded.</div></div>
+          <div class="view-actions"><button class="btn" onclick="toast('Filtered','ri-filter-3-line')"><i class="ri-filter-3-line"></i>Filter</button><button class="btn btn-primary" onclick="toast('Pushed 31 items to Training','ri-share-forward-line')"><i class="ri-share-forward-line"></i>Push to Training</button></div>
+        </div>
+        <div class="mc-grid">
+          <div class="stat" style="--stat-glow:rgba(18,160,116,.1)"><div class="stat-label"><i class="ri-add-circle-line"></i>New Scenario Candidates</div><div class="stat-value">14</div><div class="stat-delta up"><i class="ri-arrow-up-line"></i> awaiting review</div></div>
+          <div class="stat" style="--stat-glow:rgba(217,135,26,.1)"><div class="stat-label"><i class="ri-repeat-line"></i>Recurring Patterns</div><div class="stat-value">7</div><div class="stat-delta warn"><i class="ri-error-warning-line"></i> 2 unaddressed</div></div>
+          <div class="stat" style="--stat-glow:rgba(124,92,255,.1)"><div class="stat-label"><i class="ri-book-open-line"></i>SOP Improvements</div><div class="stat-value">23</div><div class="stat-delta up"><i class="ri-arrow-up-line"></i> proposed</div></div>
+          <div class="stat" style="--stat-glow:rgba(47,107,246,.1)"><div class="stat-label"><i class="ri-graduation-cap-line"></i>Training Suggestions</div><div class="stat-value">31</div><div class="stat-delta up"><i class="ri-arrow-up-line"></i> ready</div></div>
+        </div>
+        <div class="kh-grid">
+          <div class="card">
+            <div class="card-title"><i class="ri-repeat-line"></i>Frequently Occurring Failures</div>
+            <div class="pattern-row"><div class="pattern-freq">87%</div><div class="pattern-body"><div class="pattern-title">Hydraulic leak → pump failure</div><div class="pattern-sub">Aerospace · 214 simulations · trending up</div></div></div>
+            <div class="pattern-row"><div class="pattern-freq">64%</div><div class="pattern-body"><div class="pattern-title">Heatwave → cooling efficiency drop</div><div class="pattern-sub">Manufacturing / Railway · 98 simulations</div></div></div>
+            <div class="pattern-row"><div class="pattern-freq">52%</div><div class="pattern-body"><div class="pattern-title">Sensor drift → operator misdiagnosis</div><div class="pattern-sub">Cross-domain · 71 simulations</div></div></div>
+            <div class="pattern-row"><div class="pattern-freq">41%</div><div class="pattern-body"><div class="pattern-title">Power fluctuation → equipment shutdown</div><div class="pattern-sub">Healthcare / Energy · 46 simulations</div></div></div>
+            <div class="pattern-row"><div class="pattern-freq">22%</div><div class="pattern-body"><div class="pattern-title">GPS spoofing → navigation loss</div><div class="pattern-sub">Defence · 19 simulations</div></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="ri-lightbulb-flash-line"></i>Lessons Learned</div>
+            <div class="lesson-item"><div class="lesson-head"><div class="lesson-title">Early sensor recalibration prevents 80% of downstream cascades</div><span class="tag tag-cyan">HIGH VALUE</span></div><div class="lesson-txt">Across 71 simulations, intervening at the sensor-drift node instead of the pump-failure node reduced total consequence depth by an average of 4.2 nodes.</div></div>
+            <div class="lesson-item"><div class="lesson-head"><div class="lesson-title">Operator overtime correlates with next-shift error rate</div><span class="tag tag-amber">MED VALUE</span></div><div class="lesson-txt">Simulated shifts following &gt;2hrs overtime show a 31% increase in operator-decision fault chains the following shift.</div></div>
+            <div class="lesson-item"><div class="lesson-head"><div class="lesson-title">Cross-domain chains are undertested</div><span class="tag tag-crimson">GAP</span></div><div class="lesson-txt">Only 6% of simulations model a failure crossing domain packs (e.g. power → hospital). Recommend a cross-domain exercise series.</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-title"><i class="ri-git-merge-line"></i>Scenario Genealogy — "Hydraulic Leak" Lineage</div>
+          <div class="evo-wrap"><svg viewBox="0 0 900 210" width="100%" height="210" id="evoSvgKnowledge"></svg></div>
+        </div>
+      </section>
+
+      <!-- DOMAIN PACKS -->
+      <section class="view" id="view-packs">
+        <div class="view-head"><div><div class="view-title">Domain Packs</div><div class="view-sub">Swap the vertical without changing the engine. Each pack ships its own assets, faults, actors and KPIs.</div></div></div>
+        <div class="card"><div class="card-title"><i class="ri-plug-line"></i>Installed Packs</div><div class="simple-list" id="packList"></div></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="view-head"><div><div class="view-title">Settings</div><div class="view-sub">Engine, determinism and workspace preferences.</div></div></div>
+        <div class="split-row">
+          <div class="card"><div class="card-title"><i class="ri-settings-4-line"></i>Engine</div>
+            <div class="simple-list">
+              <div class="r"><div class="ic"><i class="ri-shuffle-line"></i></div><div style="flex:1"><div class="pattern-title">Deterministic mode</div><div class="pattern-sub">Same inputs always reproduce the same cascade</div></div><div class="toggle on" onclick="this.classList.toggle('on');toast('Setting updated')"></div></div>
+              <div class="r"><div class="ic"><i class="ri-sparkling-2-line"></i></div><div style="flex:1"><div class="pattern-title">AI cascade suggestions</div><div class="pattern-sub">Let the copilot propose missing chain links</div></div><div class="toggle on" onclick="this.classList.toggle('on');toast('Setting updated')"></div></div>
+              <div class="r"><div class="ic"><i class="ri-record-circle-line"></i></div><div style="flex:1"><div class="pattern-title">Auto-capture incidents as scenarios</div><div class="pattern-sub">Every incident becomes a fault-injection scenario</div></div><div class="toggle on" onclick="this.classList.toggle('on');toast('Setting updated')"></div></div>
+            </div>
+          </div>
+          <div class="card"><div class="card-title"><i class="ri-palette-line"></i>Workspace</div>
+            <div class="simple-list">
+              <div class="r"><div class="ic"><i class="ri-speed-line"></i></div><div style="flex:1"><div class="pattern-title">Default playback speed</div><div class="pattern-sub">1× · real-time cascade playback</div></div><span class="tag tag-mute">1×</span></div>
+              <div class="r"><div class="ic"><i class="ri-ruler-line"></i></div><div style="flex:1"><div class="pattern-title">Default horizon</div><div class="pattern-sub">6 hours</div></div><span class="tag tag-mute">6h</span></div>
+              <div class="r"><div class="ic"><i class="ri-team-line"></i></div><div style="flex:1"><div class="pattern-title">Persona</div><div class="pattern-sub">Plant Manager / COO dashboard</div></div><span class="tag tag-cyan">COO</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"><i class="ri-checkbox-circle-fill"></i><span id="toastMsg"></span></div>
+
+<script>
+const $=id=>document.getElementById(id);
+function toast(msg,icon){const t=$("toast");$("toastMsg").textContent=msg;t.querySelector('i').className=(icon||'ri-checkbox-circle-fill');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);}
+
+/* ---- nav ---- */
+const viewNames={mission:'Mission Control',library:'Scenario & Faults',builder:'Scenario Builder',world:'World Builder',sim:'Simulation Workspace',reports:'Reports',knowledge:'Knowledge Hub',packs:'Domain Packs',settings:'Settings'};
+let currentView='mission';
+function nav(v){
+  currentView=v;
+  document.querySelectorAll('.nav-item[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
+  $('view-'+v).classList.add('active');
+  $('crumbView').textContent=viewNames[v];
+  $('workspace').scrollTop=0;
+  if(v==='sim') simEnsure();
+  if(v==='world') renderWorld();
+  if(v==='reports') renderReports();
+}
+document.querySelectorAll('.nav-item[data-view]').forEach(it=>it.onclick=()=>nav(it.dataset.view));
+
+/* ---- domain packs ---- */
+const domains=[
+  {key:'aerospace',label:'Aerospace & MRO',icon:'ri-plane-line',count:34},
+  {key:'railway',label:'Railway Operations',icon:'ri-train-line',count:28},
+  {key:'healthcare',label:'Healthcare Systems',icon:'ri-hospital-line',count:21},
+  {key:'defence',label:'Defence & Security',icon:'ri-shield-line',count:19},
+  {key:'manufacturing',label:'Manufacturing',icon:'ri-settings-3-line',count:24},
+  {key:'energy',label:'Energy & Utilities',icon:'ri-flashlight-line',count:16},
+  {key:'smartcity',label:'Smart Cities',icon:'ri-building-4-line',count:12}];
+let domainIdx=0;
+$('domainSelect').innerHTML=domains.map((d,i)=>`<option value="${i}">${d.label}</option>`).join('');
+function setDomain(i){domainIdx=+i;$('domainIcon').className=domains[domainIdx].icon;$('domainSelect').value=domainIdx;toast('Domain pack: '+domains[domainIdx].label,domains[domainIdx].icon);if(currentView==='world')renderWorld();loadBackendScenarios(domains[domainIdx].key);}
+$('packList').innerHTML=domains.map((d,i)=>`<div class="r"><div class="ic"><i class="${d.icon}"></i></div><div style="flex:1"><div class="pattern-title">${d.label}</div><div class="pattern-sub">${d.count} scenarios · engine-agnostic</div></div><span class="tag ${i<4?'tag-green':'tag-mute'}">${i<4?'INSTALLED':'AVAILABLE'}</span></div>`).join('');
+
+/* ---- WORLD BUILDER (per-domain assets/actors) ---- */
+const worldData={
+  aerospace:{
+    assets:[['Hydraulic System','equipment · criticality 5'],['Hydraulic Pump','equipment · criticality 5'],['Aircraft — N12345','equipment · criticality 5'],['Airport Gate B12','facility · criticality 2'],['Ground Crew','personnel · criticality 2']],
+    res:[['Redundant Hydraulic Line','safeguard · actor scope'],['Predictive Maintenance Alerting','monitor · global scope']],
+    roles:[['Maintenance Crew','Diagnose and repair the fault before it cascades'],['Operations Control','Manage schedule impact, gate reassignment, crew notifications']],
+    objective:'Restore hydraulic pressure within 30 min · zero diversions'},
+  railway:{
+    assets:[['Signal Block SB-14','control system · criticality 5'],['Platform 2','facility · criticality 3'],['Train Unit','equipment · criticality 4']],
+    res:[['Backup Signal Relay','safeguard · actor scope'],['CCTV / Track Monitoring','monitor · global scope']],
+    roles:[['Signal Technician','Diagnose and restore signal-block state before service impact compounds']],
+    objective:'Reset the failed signal block before peak-hour crowding builds'},
+};
+const worldState={};
+function getWorld(k){if(!worldState[k]){const w=worldData[k];worldState[k]={assets:new Set((w?w.assets:[]).map(a=>a[0])),res:new Set((w?w.res:[]).map(a=>a[0])),roles:new Set((w?w.roles:[]).map(a=>a[0])),obj:(w?w.objective:'')};}return worldState[k];}
+function toggleWorld(k,v){const w=worldData[k],st=getWorld(k);const set=w.assets.some(a=>a[0]===v)?st.assets:w.res.some(a=>a[0]===v)?st.res:st.roles;set.has(v)?set.delete(v):set.add(v);renderWorld();}
+function saveWorld(){toast('World configuration saved for '+domains[domainIdx].label+' (demo)','ri-save-3-line');}
+function renderWorld(){
+  const d=domains[domainIdx],w=worldData[d.key];
+  const head=`<div class="view-head"><div><div class="view-title">World Builder</div><div class="view-sub">Assemble the ${d.label} world — assets, resources, roles and objectives. Switch the domain pack (top-left) to rebuild it from a different vertical.</div></div><div class="view-actions"><button class="btn btn-primary" onclick="saveWorld()"><i class="ri-save-3-line"></i>Save world</button></div></div>`;
+  if(!w){$('view-world').innerHTML=head+`<div class="card"><div class="empty-hint">The full world model for <b>${d.label}</b> ships inside its domain pack. In this prototype, <b>Aerospace</b> and <b>Railway</b> are fully authored — switch the domain pack at the top-left to Aerospace or Railway to see their assets and actors change.</div></div>`;return;}
+  const st=getWorld(d.key);
+  const rows=(items,set)=>items.map(a=>`<div class="wb-row ${set.has(a[0])?'on':''}" onclick="toggleWorld('${d.key}','${a[0].replace(/'/g,"\\'")}')"><div><div class="nm">${a[0]}</div><div class="mt">${a[1]}</div></div><div class="chk">${set.has(a[0])?'✓':'+'}</div></div>`).join('');
+  $('view-world').innerHTML=head+`
+    <div class="wb-grid">
+      <div class="card"><div class="card-title"><i class="ri-hard-drive-2-line"></i>Assets<span class="right">${st.assets.size}/${w.assets.length}</span></div>${rows(w.assets,st.assets)}</div>
+      <div class="card"><div class="card-title"><i class="ri-shield-check-line"></i>Resources &amp; safeguards<span class="right">${st.res.size}/${w.res.length}</span></div>${rows(w.res,st.res)}</div>
+      <div class="card"><div class="card-title"><i class="ri-team-line"></i>Actors / roles<span class="right">${st.roles.size}/${w.roles.length}</span></div>${rows(w.roles,st.roles)}</div>
+    </div>
+    <div class="split-row" style="margin-top:14px">
+      <div class="card"><div class="card-title"><i class="ri-focus-3-line"></i>Objectives</div>
+        <input class="insp-value" style="width:100%;font-family:var(--font)" value="${(st.obj||'').replace(/"/g,'&quot;')}" oninput="getWorld('${d.key}').obj=this.value">
+        <div class="empty-hint" style="text-align:left;padding:10px 0 0">Objectives become the pass/fail conditions the run is scored against.</div></div>
+      <div class="card grad"><div class="card-title"><i class="ri-global-line"></i>World summary — ${d.label}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><span class="tag tag-cyan">${st.assets.size} assets</span><span class="tag tag-amber">${st.res.size} safeguards</span><span class="tag tag-violet">${st.roles.size} roles</span></div>
+        <div class="empty-hint" style="text-align:left;padding:12px 0 0">Building blocks are specific to the <b>${d.label}</b> pack — the engine core never changes, only the pack.</div></div>
+    </div>`;
+}
+
+/* ---- SCENARIO & FAULTS library ---- */
+const scenarios=[
+  {t:'Hydraulic Leak → Pressure Loss',sev:'crimson',dom:'Aerospace',cat:'Equipment',src:'Authored',chain:6,desc:'Progressive hydraulic failure through to flight delay and gate congestion.'},
+  {t:'Bird Strike → Engine Damage',sev:'crimson',dom:'Aerospace',cat:'Equipment',src:'From Incident',chain:5,desc:'Foreign-object ingestion cascading into single-engine diversion.'},
+  {t:'De-icing Delay → Slot Loss',sev:'amber',dom:'Aerospace',cat:'Environmental',src:'Authored',chain:4,desc:'Winter ground delay propagating into missed departure slots.'},
+  {t:'Heatwave → Cooling Efficiency Drop',sev:'amber',dom:'Manufacturing',cat:'Environmental',src:'AI Generated',chain:9,desc:'Ambient rise cascading into machine overheating and line stoppage.'},
+  {t:'Coolant Failure → Pump Overheat',sev:'crimson',dom:'Manufacturing',cat:'Equipment',src:'From Incident',chain:7,desc:'Loss of coolant flow driving thermal runaway on the main pump.'},
+  {t:'Supply Shortage → Delivery Delay',sev:'amber',dom:'Manufacturing',cat:'Supply Chain',src:'Authored',chain:3,desc:'Spare-parts shortage propagating into missed customer commitments.'},
+  {t:'GPS Spoofing → Navigation Loss',sev:'crimson',dom:'Defence',cat:'Cyber Event',src:'Authored',chain:5,desc:'Adversarial signal interference culminating in emergency extraction.'},
+  {t:'Radar Failure → Drone Undetected',sev:'crimson',dom:'Defence',cat:'Equipment',src:'From Incident',chain:6,desc:'Sensor blind-spot resulting in unauthorised airspace incursion.'},
+  {t:'Comms Jam → Coordination Breakdown',sev:'amber',dom:'Defence',cat:'Cyber Event',src:'AI Generated',chain:5,desc:'Electronic warfare event isolating a forward unit from command.'},
+  {t:'Power Fluctuation → MRI Shutdown',sev:'crimson',dom:'Healthcare',cat:'Equipment',src:'From Incident',chain:7,desc:'Grid instability cascading through backup power into ICU overload.'},
+  {t:'HVAC Failure → OR Delay',sev:'amber',dom:'Healthcare',cat:'Equipment',src:'Authored',chain:4,desc:'Ward climate drift delaying operating-room readiness.'},
+  {t:'Medication Stockout → Care Delay',sev:'amber',dom:'Healthcare',cat:'Supply Chain',src:'AI Generated',chain:3,desc:'Pharmacy shortage cascading into delayed treatment windows.'},
+  {t:'Track Flooding → Service Suspension',sev:'amber',dom:'Railway',cat:'Environmental',src:'Authored',chain:8,desc:'Heavy rainfall event through to bus-replacement and congestion.'},
+  {t:'Signal Failure → Platform Overcrowding',sev:'crimson',dom:'Railway',cat:'Equipment',src:'From Incident',chain:6,desc:'Signal block fail-safe halting service and building crowd pressure.'},
+  {t:'Sensor Drift → Operator Misdiagnosis',sev:'amber',dom:'Cross-Domain',cat:'Human / Operator',src:'AI Generated',chain:4,desc:'Instrumentation fault leading to incorrect operator compensation.'},
+  {t:'Operator Fatigue → Error Cascade',sev:'amber',dom:'Cross-Domain',cat:'Human / Operator',src:'AI Generated',chain:5,desc:'Duty-time breach raising decision-error probability across the shift.'},
+  {t:'Phishing → Credential Compromise',sev:'amber',dom:'Cross-Domain',cat:'Cyber Event',src:'Authored',chain:5,desc:'Social-engineering entry point into control-system access.'},
+  {t:'Transformer Overheat → Grid Trip',sev:'crimson',dom:'Energy',cat:'Equipment',src:'From Incident',chain:7,desc:'Substation thermal fault cascading into a rolling load-shed.'},
+];
+const sevColor={crimson:'var(--crimson)',amber:'var(--amber)',cyan:'var(--cyan)'};
+const filters={Domain:new Set(),Severity:new Set(),Category:new Set(),Source:new Set()};
+function facet(key,val){return scenarios.filter(s=>({Domain:s.dom,Severity:cap(s.sev),Category:s.cat,Source:s.src}[key]===val)).length;}
+const cap=s=>({crimson:'Critical',amber:'Elevated',cyan:'Low'}[s]||s);
+function buildFilters(){
+  const groups={Domain:['Aerospace','Railway','Healthcare','Defence','Manufacturing','Energy','Cross-Domain'],
+    Severity:['Critical','Elevated'],Category:['Equipment','Environmental','Human / Operator','Cyber Event','Supply Chain'],
+    Source:['AI Generated','From Incident','Authored']};
+  const map={Domain:'fltDomain',Severity:'fltSev',Category:'fltCat',Source:'fltSrc'};
+  for(const g in groups){$(map[g]).innerHTML=groups[g].map(v=>{
+    const n=scenarios.filter(s=>({Domain:s.dom,Severity:cap(s.sev),Category:s.cat,Source:s.src}[g]===v)).length;
+    return `<div class="filter-chip" data-g="${g}" data-v="${v}" onclick="toggleFilter('${g}','${v.replace(/'/g,"\\'")}',this)">${v} <span class="n">${n}</span></div>`;}).join('');}
+}
+function toggleFilter(g,v,el){el.classList.toggle('on');filters[g].has(v)?filters[g].delete(v):filters[g].add(v);renderLibrary();}
+function clearFilters(){for(const k in filters)filters[k].clear();document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('on'));$('libSearch').value='';renderLibrary();}
+function renderLibrary(){
+  const q=($('libSearch').value||'').toLowerCase();
+  const rows=scenarios.filter(s=>{
+    if(filters.Domain.size&&!filters.Domain.has(s.dom))return false;
+    if(filters.Severity.size&&!filters.Severity.has(cap(s.sev)))return false;
+    if(filters.Category.size&&!filters.Category.has(s.cat))return false;
+    if(filters.Source.size&&!filters.Source.has(s.src))return false;
+    if(q&&!(s.t+s.desc+s.cat).toLowerCase().includes(q))return false;
+    return true;});
+  $('libSub').textContent=`Fault library — ${rows.length} of ${scenarios.length} faults shown · each links to its cascade chain.`;
+  $('scenarioGrid').innerHTML=rows.map((s,i)=>`
+    <div class="scenario-card" onclick='openScenario(${scenarios.indexOf(s)})'>
+      <div class="scenario-card-top"><span class="sev-dot" style="background:${sevColor[s.sev]}"></span><span class="tag tag-mute">${s.src}</span></div>
+      <div class="scenario-card-title">${s.t}</div>
+      <div class="scenario-card-desc">${s.desc}</div>
+      <div class="scenario-card-tags"><span class="tag tag-cyan">${s.dom}</span><span class="tag ${s.sev==='crimson'?'tag-crimson':'tag-amber'}">${cap(s.sev)}</span><span class="tag tag-mute">${s.cat}</span></div>
+      <div class="scenario-card-foot"><span class="chain-badge"><i class="ri-git-branch-line"></i>${s.chain} nodes</span><span class="open">Open in Builder →</span></div>
+    </div>`).join('')||`<div style="color:var(--text-faint);padding:30px;text-align:center">No faults match these filters.</div>`;
+}
+function openScenario(i){const s=scenarios[i];nav('builder');const key=Object.keys(FAULTS).find(k=>s.t.toLowerCase().includes(FAULTS[k].n.toLowerCase().split(' ')[0]));B.stages=[{fault:key||domFaults()[0],conds:new Set(),readiness:62}];renderStages();rebuild();toast('Loaded "'+s.t+'" as Stage A','ri-stack-line');}
+
+/* ---- BUILDER: graph draw + generation ---- */
+const CATCOLOR={environmental:'amber',equipment:'crimson',human:'violet',outcome:'cyan',derived:'amber',cyber:'crimson'};
+let gScale=1,curGraph=null,curSel=null,nodeCounter=100,dragId=null,dragOff=null,dragMoved=false;
+function fitText(s,max){return s.length>max?s.slice(0,max-1)+'…':s;}
+function drawGraph(svgId,nodes,edges){
+  const svg=$(svgId);if(!svg)return;const ns='http://www.w3.org/2000/svg';svg.innerHTML='';
+  edges.forEach(e=>{const a=nodes[e.from],b=nodes[e.to];if(!a||!b)return;const p=document.createElementNS(ns,'path');const mx=(a.x+a.w+b.x)/2;
+    p.setAttribute('d',`M${a.x+a.w} ${a.y+a.h/2} C ${mx} ${a.y+a.h/2}, ${mx} ${b.y+b.h/2}, ${b.x} ${b.y+b.h/2}`);
+    p.setAttribute('class',e.hot?'edge-flow':'edge-path');svg.appendChild(p);});
+  Object.entries(nodes).forEach(([id,n])=>{const g=document.createElementNS(ns,'g');g.setAttribute('class','gnode'+(dragId===id?' dragging':''));
+    g.addEventListener('pointerdown',ev=>onNodeDown(id,ev));
+    if(n.selected){const gl=document.createElementNS(ns,'rect');gl.setAttribute('x',n.x-3);gl.setAttribute('y',n.y-3);gl.setAttribute('width',n.w+6);gl.setAttribute('height',n.h+6);gl.setAttribute('rx',13);gl.setAttribute('fill','none');gl.setAttribute('stroke','var(--cyan)');gl.setAttribute('stroke-width',1.4);gl.setAttribute('opacity','.35');g.appendChild(gl);}
+    const r=document.createElementNS(ns,'rect');r.setAttribute('x',n.x);r.setAttribute('y',n.y);r.setAttribute('width',n.w);r.setAttribute('height',n.h);r.setAttribute('rx',10);
+    r.setAttribute('fill','#fff');r.setAttribute('stroke',n.selected?'var(--cyan)':`var(--${n.color||'operational'})`);r.setAttribute('stroke-width',n.selected?2.2:1.4);g.appendChild(r);
+    const bar=document.createElementNS(ns,'rect');bar.setAttribute('x',n.x);bar.setAttribute('y',n.y);bar.setAttribute('width',4);bar.setAttribute('height',n.h);bar.setAttribute('rx',2);bar.setAttribute('fill',`var(--${n.color||'cyan'})`);g.appendChild(bar);
+    const d=document.createElementNS(ns,'circle');d.setAttribute('cx',n.x+18);d.setAttribute('cy',n.y+n.h/2);d.setAttribute('r',4);d.setAttribute('fill',`var(--${n.color||'cyan'})`);g.appendChild(d);
+    const t=document.createElementNS(ns,'text');t.setAttribute('x',n.x+30);t.setAttribute('y',n.y+n.h/2-2);t.setAttribute('class','node-label');t.textContent=fitText(n.label,Math.floor((n.w-36)/6.4));g.appendChild(t);
+    const s2=document.createElementNS(ns,'text');s2.setAttribute('x',n.x+30);s2.setAttribute('y',n.y+n.h/2+13);s2.setAttribute('class','node-sub');s2.textContent=n.sub||'';g.appendChild(s2);
+    svg.appendChild(g);});
+}
+function selectNode(id){const g=curGraph;if(!g||!g.nodes[id])return;curSel=id;Object.values(g.nodes).forEach(n=>n.selected=false);g.nodes[id].selected=true;drawGraph('builderSvg',g.nodes,g.edges);renderInspector(g.nodes[id]);}
+/* ---- drag ---- */
+function svgPt(ev){const svg=$('builderSvg');const p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+function onNodeDown(id,ev){ev.preventDefault();if(B.connect){pickConnect(id);return;}dragId=id;dragMoved=false;const p=svgPt(ev);dragOff={dx:curGraph.nodes[id].x-p.x,dy:curGraph.nodes[id].y-p.y};selectNode(id);}
+window.addEventListener('pointermove',ev=>{if(!dragId||!curGraph)return;const p=svgPt(ev);const n=curGraph.nodes[dragId];if(!n)return;n.x=Math.round(p.x+dragOff.dx);n.y=Math.round(p.y+dragOff.dy);dragMoved=true;drawGraph('builderSvg',curGraph.nodes,curGraph.edges);});
+window.addEventListener('pointerup',()=>{dragId=null;});
+function renderInspector(n){
+  const prob=n.prob||(40+(n.label.length*7)%55);
+  const opts=[['amber','Environmental'],['crimson','Equipment'],['violet','Human'],['cyan','Outcome']];
+  $('inspector').innerHTML=`
+    <div class="card-title" style="margin-bottom:12px"><i class="ri-node-tree"></i>Node Inspector</div>
+    <div class="insp-field"><div class="insp-label">Block label</div><input class="insp-value" style="width:100%;font-family:var(--font)" value="${escapeHtml(n.label)}" onchange="setNodeLabel(this.value)"></div>
+    <div class="insp-field"><div class="insp-label">Category</div><select class="insp-value" style="width:100%" onchange="setNodeColor(this.value)">${opts.map(o=>`<option value="${o[0]}" ${n.color===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>
+    <div class="insp-field"><div class="insp-label">Type</div><div class="insp-value">${n.sub||'—'}</div></div>
+    <div class="insp-field"><div class="insp-label">Trigger condition</div><div class="insp-value">${n.trigger||'derived from upstream state'}</div></div>
+    <div class="insp-field"><div class="insp-label">Probability</div><div class="insp-value">${prob}%</div><div class="insp-bar"><div style="width:${prob}%;background:var(--${n.color||'cyan'})"></div></div></div>
+    <div class="insp-field"><div class="insp-label">AI explanation</div><div class="insp-value" style="line-height:1.5">${n.expl||'Triggered when upstream dependencies reach threshold, propagating the cascade downstream.'}</div></div>
+    <div class="insp-actions">
+      <button class="insp-btn pri" onclick="addBlock()"><i class="ri-add-line"></i>Add block</button>
+      <button class="insp-btn danger" onclick="deleteBlock()"><i class="ri-delete-bin-line"></i>Remove</button>
+    </div>`;
+}
+function baseVB(){const g=curGraph;let mx=900,my=520;if(g)Object.values(g.nodes).forEach(n=>{mx=Math.max(mx,n.x+n.w+30);my=Math.max(my,n.y+n.h+30);});return {w:mx,h:my};}
+function zoomG(d){gScale=Math.max(0.5,Math.min(1.8,gScale+d));const b=baseVB(),el=$('builderSvg');const w=b.w/gScale,h=b.h/gScale;el.setAttribute('viewBox',`${(b.w-w)/2} ${(b.h-h)/2} ${w} ${h}`);}
+function fitG(){gScale=1;const b=baseVB();$('builderSvg').setAttribute('viewBox',`0 0 ${b.w} ${b.h}`);}
+
+/* layered layout from node/edge arrays */
+function layout(nodeArr,edgeArr){
+  const indeg={};nodeArr.forEach(n=>indeg[n.id]=0);edgeArr.forEach(e=>indeg[e.to]=(indeg[e.to]||0)+1);
+  const depth={};const q=nodeArr.filter(n=>!indeg[n.id]).map(n=>n.id);q.forEach(id=>depth[id]=0);
+  const adj={};edgeArr.forEach(e=>(adj[e.from]=adj[e.from]||[]).push(e.to));
+  const seen=new Set(q);while(q.length){const id=q.shift();(adj[id]||[]).forEach(to=>{depth[to]=Math.max(depth[to]??0,(depth[id]||0)+1);if(!seen.has(to)){seen.add(to);q.push(to);}});}
+  nodeArr.forEach(n=>{if(depth[n.id]==null)depth[n.id]=0;});
+  const byD={};nodeArr.forEach(n=>(byD[depth[n.id]]=byD[depth[n.id]]||[]).push(n));
+  const dict={};const colGap=205,W=168,H=48,rowGap=74,mx=24,my=28;let maxRows=Math.max(...Object.values(byD).map(a=>a.length));
+  Object.keys(byD).map(Number).forEach(d=>{const col=byD[d];const off=(maxRows-col.length)/2;
+    col.forEach((n,i)=>{dict[n.id]={x:mx+d*colGap,y:my+(i+off)*rowGap,w:W,h:H,label:n.label,sub:n.sub,color:n.color,trigger:n.trigger,expl:n.expl,interv:n.interv,prob:n.prob,delay:n.delay,selected:n.selected};});});
+  return dict;
+}
+
+/* keyword → category */
+function catOf(w){
+  const m=[['environmental',['heatwave','flood','fire','storm','rain','temperature','weather','monsoon','ambient','ice','de-icing','cold']],
+    ['equipment',['hydraulic','pump','sensor','motor','valve','transformer','bearing','coolant','brake','engine','mri','radar','signal','leak','overheat','shutdown','failure','fault','pressure','grid','power']],
+    ['human',['operator','human','fatigue','error','staffing','crew','misdiagnos','override','technician','decision']],
+    ['cyber',['cyber','gps','spoof','phish','jam','network','malware','hack','credential']]];
+  for(const[c,ks]of m)if(ks.some(k=>w.includes(k)))return c;return null;
+}
+function titleCase(s){return s.replace(/\b\w/g,c=>c.toUpperCase());}
+function escapeHtml(s){return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* ===== STAGE-BASED SCENARIO CONSOLE ===== */
+const DOM_FAULTS={
+  railway:['signal_failure','power_failure','track_obstruction','brake_failure','comms_failure','human_error','maintenance_delay'],
+  aerospace:['hydraulic_leak','engine_fault','bird_strike','gate_hold','comms_failure','human_error','maintenance_delay'],
+};
+const FAULTS={signal_failure:{n:'Signal Failure'},power_failure:{n:'Power Failure'},track_obstruction:{n:'Track Obstruction'},brake_failure:{n:'Brake Failure'},comms_failure:{n:'Communication Failure'},human_error:{n:'Human Error'},maintenance_delay:{n:'Maintenance Delay'},hydraulic_leak:{n:'Hydraulic Leak'},engine_fault:{n:'Engine Fault'},bird_strike:{n:'Bird Strike'},gate_hold:{n:'Gate Hold'}};
+const COND={rain:{n:'Heavy Rain',pen:10,node:['Speed Limits','human',3]},peak:{n:'Peak Hour',pen:14,node:['Passenger Surge','human',4]},reduced_staff:{n:'Reduced Staff',pen:12,node:['Slow Response','human',4]},heat:{n:'Heatwave',pen:8,node:['Heat Stress','environmental',3]},flood:{n:'Flooding',pen:12,node:['Flooded Track','environmental',4]}};
+const CHAINS={
+ signal_failure:[['Signal Block Failure','equipment',2],['Speed Restrictions','human',2],['Train Delay','human',3],['Platform Congestion','human',3]],
+ power_failure:[['Traction Power Loss','equipment',3],['Signalling Down','equipment',4],['Trains Stranded','human',4]],
+ track_obstruction:[['Track Obstruction','environmental',3],['Line Closure','human',4],['Rerouting','human',3]],
+ brake_failure:[['Brake Failure','equipment',3],['Emergency Stop','human',4],['Line Blocked','human',3]],
+ comms_failure:[['Comms Failure','equipment',2],['Manual Working','human',3],['Reduced Throughput','human',3]],
+ human_error:[['Operator Error','human',2],['Incorrect Routing','human',3],['Near-miss','human',4]],
+ maintenance_delay:[['Maintenance Overdue','equipment',2],['Asset Degradation','equipment',3],['Unplanned Failure','equipment',4]],
+ hydraulic_leak:[['Hydraulic Leak','equipment',2],['Pressure Loss','equipment',3],['Repair Postponed','human',3]],
+ engine_fault:[['Engine Fault','equipment',3],['Single-Engine Ops','human',4],['Diversion','human',4]],
+ bird_strike:[['Bird Strike','environmental',3],['Engine Damage','equipment',4],['Precautionary Landing','human',4]],
+ gate_hold:[['Gate Hold','human',2],['Departure Delay','human',3],['Knock-on Delays','human',3]],
+};
+const SEVC=['','#12a074','#c9a70e','#e08420','#e5484d','#a01722'],SEVN=['','Minor','Moderate','Elevated','Severe','Critical'];
+const CATCOLORMAP={environmental:'amber',equipment:'crimson',human:'violet',outcome:'cyan'};
+const CATINTERV={equipment:'Replace / add redundancy on the failing asset',environmental:'Apply protective speed limits & monitoring',human:'Add staff & decision support at this step',outcome:'Mitigate the upstream causes to avoid this outcome'};
+const CATASSET={equipment:'Trains, signals, power, track assets',environmental:'Right-of-way, structures, weather exposure',human:'Operators, crew, passengers',outcome:'Timetable, revenue, service level'};
+const B={stages:[{fault:'signal_failure',conds:new Set(['peak']),readiness:62}],connect:false,connectFrom:null,ran:false,base:null,playhead:0,playing:false,raf:null,simSel:null,rg:null};
+
+/* ===================================================================
+   PHASE 3 — REAL BACKEND (FastAPI simulation engine)
+   Served same-origin from FastAPI, so base URL is ''. No API key is
+   configured in local dev (settings.scenario_api_key defaults to ''),
+   but if you set SCENARIO_API_KEY, put it in API.key below.
+   =================================================================== */
+const API={base:'',key:''};
+async function api(path,opts){
+  const h={'Content-Type':'application/json'};if(API.key)h['X-API-Key']=API.key;
+  const r=await fetch(API.base+path,Object.assign({headers:h},opts||{}));
+  if(!r.ok){let d='';try{d=JSON.stringify((await r.json()).detail);}catch(e){}throw new Error('HTTP '+r.status+(d?' — '+d:''));}
+  return r.json();
+}
+/* Domains whose scenarios are actually registered in the backend. Railway first. */
+const BACKEND_DOMAINS=new Set(['railway']);
+/* Backend vocabulary -> the UI's existing 4-colour category vocabulary. */
+const BE_CAT={equipment:'equipment',cyber:'equipment',human:'human',safety:'human',
+  environment:'environmental',environmental:'environmental',
+  operational:'outcome',financial:'outcome',supply:'outcome'};
+const BE_SEV={low:2,medium:3,high:4,critical:5};                 // Scenario.impact_level -> 1..5
+const EV_SEV={info:1,low:2,medium:3,high:4,critical:5};          // SimEvent.severity   -> 1..5
+
+/* Pull the real fault scenarios for a domain and register them where the existing
+   stage UI already looks for them (DOM_FAULTS + FAULTS), so renderStages() keeps
+   working unchanged — but now every option's value IS a real backend scenario_id. */
+async function loadBackendScenarios(key){
+  if(!BACKEND_DOMAINS.has(key))return;
+  try{
+    const list=await api('/scenarios?domain='+encodeURIComponent(key));
+    const faults=list.filter(s=>s.node_kind==='fault');
+    if(!faults.length)return;
+    faults.forEach(s=>{
+      FAULTS[s.id]={n:s.name,desc:s.description,cat:s.category,impact:s.impact_level};
+      /* the Builder's local *preview* chain is keyed by short name — alias it onto the real
+         scenario id so the pre-run preview still resembles the fault you selected. The
+         authoritative cascade always comes from the engine on Run. */
+      if(!CHAINS[s.id])CHAINS[s.id]=CHAINS[Object.keys(CHAINS).find(k=>s.id.includes(k))]||CHAINS.signal_failure;
+    });
+    DOM_FAULTS[key]=faults.map(s=>s.id);
+    if(currentView==='builder'||!B.ran){renderStages();rebuild();}
+  }catch(e){toast('Could not load scenarios: '+e.message,'ri-error-warning-line');}
+}
+
+/* Longest-path layering. layout() above visits each node once, which under-ranks a node
+   that a *later* branch also feeds (the cascade converges — e.g. passenger_medical also
+   spawns service_suspension), drawing that edge backwards. Relaxing in topological order
+   fixes it. Returns the exact same dict shape layout() returns, so drawGraph()/drawSim()
+   consume it unchanged. */
+function beLayout(nodeArr,edgeArr){
+  const ids=nodeArr.map(n=>n.id),indeg={},adj={};
+  ids.forEach(i=>{indeg[i]=0;adj[i]=[];});
+  edgeArr.forEach(e=>{if(indeg[e.to]==null||adj[e.from]==null)return;indeg[e.to]++;adj[e.from].push(e.to);});
+  const depth={},q=ids.filter(i=>!indeg[i]);ids.forEach(i=>depth[i]=0);
+  const order=[],deg=Object.assign({},indeg);
+  while(q.length){const id=q.shift();order.push(id);adj[id].forEach(to=>{if(--deg[to]===0)q.push(to);});}
+  ids.forEach(i=>{if(!order.includes(i))order.push(i);});            // cycle guard (backend is a DAG)
+  order.forEach(id=>adj[id].forEach(to=>{depth[to]=Math.max(depth[to],depth[id]+1);}));
+  const byD={};nodeArr.forEach(n=>(byD[depth[n.id]]=byD[depth[n.id]]||[]).push(n));
+  const colGap=205,W=168,H=48,rowGap=74,mx=24,my=28;
+  const maxRows=Math.max(...Object.values(byD).map(a=>a.length));
+  const dict={};
+  Object.keys(byD).map(Number).forEach(d=>{const col=byD[d],off=(maxRows-col.length)/2;
+    col.forEach((n,i)=>{dict[n.id]={x:mx+d*colGap,y:my+(i+off)*rowGap,w:W,h:H,depth:d,
+      label:n.label,sub:n.sub,color:n.color,cat:n.cat,sev:n.sev,t:n.t,expl:n.expl,be:n.be};});});
+  return dict;
+}
+
+/* RunGraph (backend) -> the exact {nodes:{id:{x,y,w,h,label,sub,color,cat,sev,t}},edges:[{from,to,hot}]}
+   structure the existing renderers already expect. This is the whole integration seam. */
+function mapRunGraph(rg){
+  const nodeArr=rg.nodes.map(n=>{
+    const cat=BE_CAT[n.category]||'outcome';
+    return {id:n.run_id,cat,color:CATCOLORMAP[cat]||'cyan',
+      label:n.scenario_name,
+      sub:(n.node_kind==='fault'?'fault':'consequence')+' · '+n.category,
+      sev:BE_SEV[n.impact_level]||3,
+      t:Math.round(n.t_offset_s/60),
+      expl:n.result&&n.result.summary&&n.result.summary.clearance
+           ? (n.result.summary.clearance.certified?'Fault correctly resolved by the operator.':'Operator did NOT resolve this fault — the cascade continues.')
+           : 'Downstream consequence spawned by the cascade engine.',
+      be:n};
+  });
+  const edges=rg.edges.map(e=>({from:e.parent_run_id,to:e.child_run_id,hot:e.preventable,be:e}));
+  const nodes=beLayout(nodeArr,edges);
+
+  /* flatten every node's SimEvents onto one absolute cascade clock */
+  const events=[];
+  rg.nodes.forEach(n=>(n.result&&n.result.events||[]).forEach(ev=>{
+    events.push({tsec:n.t_offset_s+ev.t,t:Math.round((n.t_offset_s+ev.t)/60),
+      title:ev.title||ev.type,message:ev.message||'',type:ev.type,
+      sev:EV_SEV[ev.severity]||1,severity:ev.severity,
+      node:n.scenario_name,runId:n.run_id});
+  }));
+  events.sort((a,b)=>a.tsec-b.tsec||a.t-b.t);
+
+  return {nodes,edges,events,backend:rg,firstId:rg.root_run_id,minR:rg.config.readiness};
+}
+/* end-of-cascade in minutes — spans both nodes and events */
+function simEnd(g){
+  const nt=Object.values(g.nodes).map(n=>n.t),et=(g.events||[]).map(e=>e.t);
+  return Math.max(1,...nt,...et,Math.round(((g.backend&&g.backend.totals.end_of_cascade_s)||0)/60));
+}
+/* Impacts computed from the real engine output (KPIs + cascade totals) instead of
+   regex-matching node labels. Same 5 keys, so impactBars() is untouched. */
+function backendImpacts(g){
+  const rg=g.backend,T=rg.totals,ns=Object.values(g.nodes);
+  const k=(rg.nodes[0]&&rg.nodes[0].result.kpis)||{};
+  const n1=Math.max(1,ns.length);
+  /* normalised engine signals, all 0..1 */
+  const load=c=>ns.filter(n=>n.cat===c).reduce((a,x)=>a+x.sev,0)/(5*n1);  // severity mass per category
+  const outcome=load('outcome'),human=load('human'),equip=load('equipment');
+  const fail=1-(k.containment_rate!=null?k.containment_rate:0);           // 1 = fault NOT contained
+  const undetected=1-(k.detection_rate!=null?k.detection_rate:0);
+  const prevRatio=T.preventable_consequences/Math.max(1,T.downstream_consequences);
+  const endN=Math.min(1,(T.end_of_cascade_s||0)/14400);                   // vs a 4h reference cascade
+  const mttrN=Math.min(1,(k.mean_time_to_resolve_s||0)/600);              // vs a 10min reference
+  const size=Math.min(1,T.total_nodes/8);
+  const u=x=>Math.min(1,x);
+  const pc=v=>Math.max(0,Math.min(100,Math.round(v*100)));
+  return {
+    Operational:    pc(0.45*fail + 0.25*prevRatio + 0.20*u(outcome*2) + 0.10*mttrN),
+    Passenger:      pc(0.50*u((human+outcome)*1.6) + 0.30*fail + 0.20*prevRatio),
+    Financial:      pc(0.35*size + 0.30*fail + 0.20*endN + 0.15*prevRatio),
+    Safety:         pc(0.35*fail + 0.45*u(human*4) + 0.20*prevRatio),
+    Infrastructure: pc(0.45*u(equip*4) + 0.35*fail + 0.20*undetected),
+  };
+}
+function domFaults(){const k=(domains[domainIdx]||{}).key;return DOM_FAULTS[k]||DOM_FAULTS.railway;}
+let sCount=0;
+function addNodeS(nodes,label,cat,sev,ex={}){const id='sg'+(sCount++);nodes[id]={id,label,cat,color:CATCOLORMAP[cat]||'cyan',sub:cat,sev:Math.min(5,Math.max(1,Math.round(sev))),...ex};return id;}
+function buildFromStages(){
+  sCount=0;const nodes={},edges=[];let prevTail=null;const minR=Math.min(100,...B.stages.map(s=>s.readiness));
+  B.stages.forEach((st,si)=>{
+    const chain=CHAINS[st.fault]||CHAINS[Object.keys(CHAINS)[0]];
+    const pen=[...st.conds].reduce((a,k)=>a+COND[k].pen,0);const effR=Math.max(0,st.readiness-pen);
+    const bump=Math.min(2,Math.floor(st.conds.size/2))+(effR<45?1:0)+si;
+    let prev=prevTail;
+    chain.forEach((c,i)=>{const id=addNodeS(nodes,c[0],c[1],c[2]+(i>0?bump:0),{trigger:si?('inherited from Stage '+String.fromCharCode(64+si)):'scenario start',expl:i?'Consequence of the stage event propagating.':'Injected event for this stage.'});if(prev)edges.push({from:prev,to:id,hot:i<1});prev=id;});
+    [...st.conds].forEach(ck=>{const cn=COND[ck].node;if(cn){const id=addNodeS(nodes,cn[0],cn[1],cn[2]+(effR<50?1:0),{expl:COND[ck].n+' aggravates this stage.'});edges.push({from:prev,to:id});}});
+    prevTail=prev;
+  });
+  const conv=addNodeS(nodes,'Service Suspension','outcome',5,{expl:'Where all stages converge — service is suspended.'});if(prevTail)edges.push({from:prevTail,to:conv,hot:true});
+  let last=conv;const outs=[];if(minR<72)outs.push(['Passenger Build-up','human',4]);if(minR<55)outs.push(['Safety Incident','human',5]);outs.push(['Financial Impact','outcome',4]);
+  outs.forEach(o=>{const id=addNodeS(nodes,o[0],o[1],o[2],{expl:'Downstream outcome of the cascade.'});edges.push({from:last,to:id,hot:true});last=id;});
+  const arr=Object.values(nodes);const dict=layout(arr,edges);
+  arr.forEach(a=>{const d=dict[a.id];if(d){d.cat=a.cat;d.sev=a.sev;d.color=a.color;}});
+  const step=Math.max(3,8-Math.floor(minR/18));Object.values(dict).forEach(n=>{n.depth=Math.round((n.x-24)/205);n.t=n.depth*step;});
+  curGraph={nodes:dict,edges,firstId:arr[0].id,minR};curSel=curGraph.firstId;if(dict[curSel])dict[curSel].selected=true;
+}
+/* stage rail */
+function renderStages(){const faults=domFaults();B.stages.forEach(st=>{if(!faults.includes(st.fault))st.fault=faults[0];});
+  $('stageList').innerHTML=B.stages.map((st,i)=>`${i?'<div class="seqarrow">↓ then</div>':''}<div class="stage"><div class="sh"><div class="sno">${String.fromCharCode(65+i)}</div><div class="stitle">Stage ${String.fromCharCode(65+i)} — ${i?'then this happens':'first this happens'}</div>${B.stages.length>1?`<i class="ri-close-line del" onclick="removeStage(${i})"></i>`:''}</div>
+   <select onchange="setStageFault(${i},this.value)">${faults.map(f=>`<option value="${f}" ${st.fault===f?'selected':''}>${FAULTS[f].n}</option>`).join('')}</select>
+   <div class="cchips">${Object.keys(COND).map(ck=>`<span class="cc ${st.conds.has(ck)?'on':''}" onclick="toggleStageCond(${i},'${ck}')">${COND[ck].n}</span>`).join('')}</div>
+   <div class="rd"><label>Operator readiness — <b>${st.readiness}</b></label><input type="range" min="0" max="100" value="${st.readiness}" oninput="setStageReadiness(${i},this.value)"></div></div>`).join('');
+}
+function rebuild(){buildFromStages();drawGraph('builderSvg',curGraph.nodes,curGraph.edges);if(curGraph.nodes[curSel])renderInspector(curGraph.nodes[curSel]);renderOutcomes();renderPredicted();fitG();}
+function addStage(){B.stages.push({fault:domFaults()[Math.min(B.stages.length,domFaults().length-1)],conds:new Set(),readiness:62});renderStages();rebuild();}
+function removeStage(i){B.stages.splice(i,1);renderStages();rebuild();}
+function setStageFault(i,v){B.stages[i].fault=v;rebuild();}
+function toggleStageCond(i,ck){const c=B.stages[i].conds;c.has(ck)?c.delete(ck):c.add(ck);renderStages();rebuild();}
+function setStageReadiness(i,v){B.stages[i].readiness=+v;const lab=event.target.previousElementSibling;if(lab){const b=lab.querySelector('b');if(b)b.textContent=v;}rebuild();}
+/* predicted insights */
+function gauge(val){const size=118,r=size/2-9,cx=size/2,cy=size/2;
+  const arc=(f,t,c,w)=>{const a0=Math.PI+Math.PI*f,a1=Math.PI+Math.PI*t;return `<path d="M${cx+r*Math.cos(a0)},${cy+r*Math.sin(a0)} A${r},${r} 0 0 1 ${cx+r*Math.cos(a1)},${cy+r*Math.sin(a1)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;};
+  const q=val>=80?['Excellent','var(--green)']:val>=60?['Strong','var(--green)']:val>=40?['Moderate','var(--amber)']:['Fragile','var(--crimson)'];
+  const na=Math.PI+Math.PI*(val/100),nx=cx+(r-6)*Math.cos(na),ny=cy+(r-6)*Math.sin(na);
+  return `<div class="gauge2"><svg width="${size}" height="${size/2+14}" viewBox="0 0 ${size} ${size/2+14}">${arc(0,1,'var(--panel-3)',9)}${arc(0,.4,'var(--crimson)',9)}${arc(.4,.6,'var(--amber)',9)}${arc(.6,1,'var(--green)',9)}<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="var(--text)" stroke-width="2.4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="4" fill="var(--text)"/><text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="19" font-weight="800" fill="var(--text)">${val}</text></svg><div><div class="ql">Expected resilience</div><div class="q" style="color:${q[1]}">${q[0]}</div><div style="font-size:10px;color:var(--text-dim);margin-top:3px;max-width:130px">Containment ${val>=60?'holds':val>=40?'partial':'weak'}.</div></div></div>`;
+}
+function computeImpacts(g){
+  if(g&&g.backend)return backendImpacts(g);   // real run -> real KPIs; builder preview keeps the heuristic below
+  const ns=Object.values(g.nodes);const cnt=ns.length;const sc=(v,m)=>Math.min(100,Math.round(v/m*100));const bySev=s=>ns.filter(n=>n.sev>=s).length;
+  return {Operational:sc(ns.filter(n=>n.cat==='outcome'||n.cat==='human').reduce((a,n)=>a+n.sev,0),18),
+   Passenger:sc(ns.filter(n=>/congest|platform|passenger|overflow|surge|build|crowd/i.test(n.label)).reduce((a,n)=>a+n.sev,0)+bySev(4)*2,12),
+   Financial:sc(cnt*2+ns.filter(n=>/financ|cost|revenue/i.test(n.label)).reduce((a,n)=>a+n.sev*3,0),40),
+   Safety:sc(ns.filter(n=>/safety|medical|emergency|near-miss|incident|strand|evac|stop/i.test(n.label)).reduce((a,n)=>a+n.sev*2,0),16),
+   Infrastructure:sc(ns.filter(n=>n.cat==='equipment').reduce((a,n)=>a+n.sev,0),16)};
+}
+const IMP=[['Operational','ri-timer-flash-line'],['Passenger','ri-group-line'],['Financial','ri-money-dollar-circle-line'],['Safety','ri-alarm-warning-line'],['Infrastructure','ri-building-2-line']];
+function impactBars(g){const im=computeImpacts(g);return IMP.map(([n,ic])=>{const v=im[n],c=v>=70?'var(--crimson)':v>=45?'var(--amber)':'var(--green)';return `<div class="imp"><div class="t"><b><i class="${ic}" style="color:${c};margin-right:5px"></i>${n}</b><span class="v" style="color:${c}">${v}</span></div><div class="b"><div style="width:${v}%;background:${c}"></div></div></div>`;}).join('');}
+function effReadiness(){return Math.max(0,Math.min(...B.stages.map(st=>st.readiness-[...st.conds].reduce((a,k)=>a+COND[k].pen,0))));}
+function renderPredicted(){if($('rdGauge'))$('rdGauge').innerHTML=gauge(effReadiness());if($('predImpact'))$('predImpact').innerHTML=impactBars(curGraph);}
+/* connect mode (draw arrows) */
+function toggleConnect(){B.connect=!B.connect;B.connectFrom=null;$('connectBtn').classList.toggle('btn-primary',B.connect);$('canvasWrap').classList.toggle('connect-on',B.connect);$('cHint').innerHTML=B.connect?'<i class="ri-links-line"></i> connect mode: click a source block, then a target block':'<i class="ri-drag-move-2-line"></i> drag · click to inspect · use “Connect blocks” to draw arrows';}
+function pickConnect(id){if(!B.connectFrom){B.connectFrom=id;selectNode(id);toast('Now click the target block','ri-links-line');return;}if(B.connectFrom!==id&&!curGraph.edges.some(e=>e.from===B.connectFrom&&e.to===id)){curGraph.edges.push({from:B.connectFrom,to:id,hot:false});toast('Arrow added','ri-links-line');}B.connectFrom=null;drawGraph('builderSvg',curGraph.nodes,curGraph.edges);renderOutcomes();}
+/* run -> simulation */
+/* Conditions (Heavy Rain, Peak Hour, Reduced Staff…) have no backend counterpart —
+   the engine models operator readiness, not weather. So they are applied the same way
+   the UI already scores them: as a readiness penalty. This is a REAL effect: drop
+   readiness far enough and the root fault's containment_rate falls to 0, which makes
+   the "containment_rate < 1" trigger fire and spawns the preventable Service
+   Suspension branch. Same scenario, bigger cascade — straight from the engine. */
+function stageReadiness(st){return Math.max(0,Math.min(100,st.readiness-[...st.conds].reduce((a,k)=>a+COND[k].pen,0)));}
+
+/* Ask the engine to run one scenario and expand its full cascade. */
+async function runGraphFor(scenarioId,readiness,domainKey){
+  return api('/runs/graph',{method:'POST',body:JSON.stringify({
+    scenario_id:scenarioId,
+    config:{domain:domainKey,readiness,difficulty:'Medium',duration_min:120},
+  })});
+}
+
+async function runSimulation(){
+  const d=domains[domainIdx];
+  if(!BACKEND_DOMAINS.has(d.key)){toast('The engine only has Railway scenarios registered — switch the domain pack to Railway','ri-error-warning-line');return;}
+  if(!B.stages.length){toast('Add a stage first','ri-error-warning-line');return;}
+  const st=B.stages[0];
+  if(!String(st.fault).includes('.')){toast('Scenario library still loading — try again in a second','ri-error-warning-line');return;}
+  if(B.stages.length>1)toast('Stage A is sent to the engine — the engine derives stages B+ itself','ri-information-line');
+
+  const readiness=stageReadiness(st);
+  const btn=document.querySelector('#view-builder .btn-primary');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ri-loader-4-line"></i>Running…';}
+  try{
+    const rg=await runGraphFor(st.fault,readiness,d.key);
+    B.rg=rg;B.base=mapRunGraph(rg);B.ran=true;B.simSel=null;B.playhead=0;
+    nav('sim');renderSimResults();renderReports();
+    const T=rg.totals;
+    toast(`Engine: ${T.total_nodes} nodes · ${T.downstream_consequences} consequences · ${T.preventable_consequences} preventable`,'ri-checkbox-circle-fill');
+  }catch(e){
+    toast('Engine error — '+e.message,'ri-error-warning-line');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ri-play-fill"></i>Run Simulation';}
+  }
+}
+function simEnsure(){renderSimResults();}
+function drawSim(){const g=B.base;if(!g)return;const ph=B.playhead;const svg=$('simSvg');let e='',nn='';
+  g.edges.forEach(ed=>{const a=g.nodes[ed.from],b=g.nodes[ed.to];if(!a||!b)return;const mx=(a.x+a.w+b.x)/2;const dim=b.t>ph;
+    e+=`<path d="M${a.x+a.w} ${a.y+a.h/2} C ${mx} ${a.y+a.h/2}, ${mx} ${b.y+b.h/2}, ${b.x} ${b.y+b.h/2}" fill="none" stroke="#cdd4e2" stroke-width="1.7" opacity="${dim?.25:1}"/>`;});
+  Object.entries(g.nodes).forEach(([id,n])=>{const col=SEVC[n.sev];const dim=n.t>ph;const sel=B.simSel===id;
+    nn+=`<g style="cursor:pointer" opacity="${dim?.3:1}" onclick="openSimNode('${id}')"><rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="10" fill="#fff" stroke="${sel?'var(--cyan)':col}" stroke-width="${sel?2.4:1.7}"/><rect x="${n.x}" y="${n.y}" width="4" height="${n.h}" rx="2" fill="${col}"/><circle cx="${n.x+18}" cy="${n.y+18}" r="4" fill="${col}"/><text x="${n.x+30}" y="${n.y+21}" class="node-label">${escapeHtml(fitText(n.label,20))}</text><text x="${n.x+14}" y="${n.y+40}" class="node-sub">${SEVN[n.sev].toUpperCase()} · +${n.t}m</text></g>`;});
+  let mxx=900;Object.values(g.nodes).forEach(n=>mxx=Math.max(mxx,n.x+n.w+24));svg.setAttribute('viewBox',`0 0 ${mxx} 560`);svg.innerHTML=e+nn;
+}
+function renderSimResults(){const g=B.base;if(!g){if($('simSub'))$('simSub').textContent='Run a scenario in the Builder to see results here.';return;}
+  const rg=g.backend,T=rg.totals,root=rg.nodes[0],cert=(root.result.summary.clearance||{}).certified;
+  $('simSub').textContent=`${rg.scenario_name} · readiness ${rg.config.readiness} · ${T.total_nodes} nodes · ${g.events.length} engine events · run ${rg.root_run_id.slice(0,8)}`;
+  $('simState').innerHTML=cert
+    ? '<i class="ri-checkbox-circle-fill" style="color:var(--green)"></i> fault contained — cascade limited'
+    : '<i class="ri-error-warning-fill" style="color:var(--crimson)"></i> fault NOT contained — '+T.preventable_consequences+' preventable consequence(s)';
+  $('simLegend').innerHTML=SEVN.slice(1).map((n,i)=>`<span><i class="sw" style="background:${SEVC[i+1]};width:9px;height:9px;border-radius:3px;display:inline-block"></i>${n}</span>`).join('');
+  B.playhead=simEnd(g);drawSim();
+  $('simImpact').innerHTML=impactBars(g);renderSimRoot();renderSimInterv();renderSimTimeline();updatePlay();
+  $('simInspector').innerHTML='<div class="card-title"><i class="ri-node-tree"></i>Node Inspector</div><div style="font-size:11.5px;color:var(--text-faint);padding:6px 0">Click any node in the cascade to inspect its real run result.</div>';
+}
+/* Timeline is now the engine's actual SimEvent stream (every node's events placed on one
+   absolute cascade clock), not one row per node. */
+function renderSimTimeline(){const g=B.base;const end=simEnd(g);$('simDur').textContent='0 → '+end+' min';
+  const rows=g.events||[];
+  $('simTimeline').innerHTML=`<div class="simtl">${rows.map(e=>`<div class="r" data-t="${e.t}" style="border-left-color:${SEVC[e.sev]};opacity:${e.t<=B.playhead?1:.4}"><div class="tm">+${String(e.t).padStart(2,'0')}m</div><div class="ti">${escapeHtml(e.title)}</div><div class="td">${escapeHtml(e.node)} · ${e.type}${e.message?' — '+escapeHtml(e.message.slice(0,70)):''}</div></div>`).join('')}</div>`;
+}
+function renderSimRoot(){const g=B.base,rg=g.backend,T=rg.totals;
+  const root=rg.nodes[0],cl=root.result.summary.clearance||{},k=root.result.kpis||{};
+  const st=B.stages[0]||{conds:new Set()};
+  const conds=[...st.conds].map(c=>COND[c].n);
+  const prevEdge=rg.edges.find(e=>e.preventable);
+  const evidence=(cl.evidence||[]).find(x=>/readiness/.test(x))||'';
+  const crit=rg.nodes.filter(n=>n.impact_level==='critical')[0];
+  $('simRoot').innerHTML=`<div class="si-field"><div class="l">Root cause</div><div class="v">${escapeHtml(rg.scenario_name)}</div></div>
+    <div class="si-field"><div class="l">Contributing factors</div><div class="v">${conds.length?escapeHtml(conds.join(', '))+' — applied as a readiness penalty ('+st.readiness+' → '+rg.config.readiness+')':'nominal conditions (readiness '+rg.config.readiness+')'}</div></div>
+    <div class="si-field"><div class="l">Containment</div><div class="v" style="border-left:3px solid ${cl.certified?'var(--green)':'var(--crimson)'}">${cl.certified?'CONTAINED':'NOT CONTAINED'} — containment_rate ${k.containment_rate}, detected in ${Math.round(k.time_to_first_detection_s||0)}s, resolved in ${Math.round(k.mean_time_to_resolve_s||0)}s</div></div>
+    ${crit?`<div class="si-field"><div class="l">Worst outcome reached</div><div class="v">${escapeHtml(crit.scenario_name)} — at +${Math.round(crit.t_offset_s/60)} min</div></div>`:''}
+    <div class="si-field"><div class="l" style="color:${prevEdge?'var(--green)':'var(--text-faint)'}">Earliest preventable moment</div><div class="v" style="border-left:3px solid ${prevEdge?'var(--green)':'var(--line)'}">${prevEdge
+      ?escapeHtml(rg.scenario_name)+' — '+escapeHtml(prevEdge.reason)
+      :'No preventable branch fired. The remaining consequences are inherent ("always") triggers of this fault.'}</div></div>
+    ${evidence?`<div class="si-field"><div class="l">Engine evidence</div><div class="v">${escapeHtml(evidence)}</div></div>`:''}`;
+}
+/* Interventions are derived from the edges the engine actually fired: a preventable edge
+   is a consequence that would NOT have spawned had the fault been contained. */
+function renderSimInterv(){const g=B.base,rg=g.backend;
+  const byRun={};rg.nodes.forEach(n=>byRun[n.run_id]=n);
+  const prev=rg.edges.filter(e=>e.preventable);
+  const items=prev.map((e,i)=>{
+    const child=byRun[e.child_run_id];
+    return `<div class="rec-item"><div class="rec-num">${String(i+1).padStart(2,'0')}</div><div class="rec-txt"><b>Contain "${escapeHtml(byRun[e.parent_run_id].scenario_name)}" before +${e.delay_min} min</b> to prevent <b>${escapeHtml(child.scenario_name)}</b>.<div style="color:var(--text-faint);margin-top:3px">${escapeHtml(e.reason)}</div></div><span class="tag tag-crimson">PREVENTABLE</span></div>`;
+  });
+  if(!items.length){
+    const raise=Math.min(100,rg.config.readiness+22);
+    items.push(`<div class="rec-item"><div class="rec-num">01</div><div class="rec-txt">The fault was contained at readiness <b>${rg.config.readiness}</b> — no preventable branch fired. The ${rg.totals.downstream_consequences} remaining consequences are inherent to this fault and can only be mitigated, not prevented.</div><span class="tag tag-green">CONTAINED</span></div>`);
+  }
+  items.push(`<div class="rec-item"><div class="rec-num">${String(items.length+1).padStart(2,'0')}</div><div class="rec-txt">Re-run at higher operator readiness to quantify the delta.</div><span class="tag tag-cyan" style="cursor:pointer" onclick="openCompare()">Compare ▸</span></div>`);
+  $('simInterv').innerHTML=items.join('');
+}
+function openSimNode(id){const g=B.base,n=g.nodes[id];if(!n)return;B.simSel=id;drawSim();
+  const be=n.be,res=be.result,k=res.kpis||{},cl=res.summary.clearance||{};
+  const inEdges=g.edges.filter(e=>e.to===id);
+  const outs=g.edges.filter(e=>e.from===id).map(e=>g.nodes[e.to].label);
+  const cause=inEdges.map(e=>g.nodes[e.from].label);
+  const fired=inEdges[0]&&inEdges[0].be;
+  const objs=(res.objectives||{}).operator||[];
+  $('simInspector').innerHTML=`<div class="card-title" style="margin-bottom:8px"><i class="ri-node-tree"></i>${escapeHtml(n.label)}</div>
+    <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <span style="background:${SEVC[n.sev]}22;color:${SEVC[n.sev]};font-weight:700;padding:2px 9px;border-radius:20px;font-size:10px;font-family:var(--mono)">${SEVN[n.sev]}</span>
+      <span class="tag ${be.node_kind==='fault'?'tag-crimson':'tag-mute'}">${be.node_kind.toUpperCase()}</span>
+      ${be.node_kind==='fault'?`<span class="tag ${cl.certified?'tag-green':'tag-crimson'}">${cl.certified?'CONTAINED':'FAILED'}</span>`:''}
+    </div>
+    <div class="si-field"><div class="l">Scenario id</div><div class="v mono" style="font-size:10.5px">${escapeHtml(be.scenario_id)}</div></div>
+    <div class="si-field"><div class="l">Cause</div><div class="v">${cause.length?escapeHtml(cause.join(', ')):'Injected event — root of the cascade.'}</div></div>
+    ${fired?`<div class="si-field"><div class="l">Why it fired</div><div class="v" style="border-left:3px solid ${fired.preventable?'var(--crimson)':'var(--line)'}">${escapeHtml(fired.reason)}</div></div>`:''}
+    <div class="si-field"><div class="l">Fires at</div><div class="v">+${n.t} min · runs ${Math.round(be.result.duration_s/60)} min · ${res.events.length} events</div></div>
+    <div class="si-field"><div class="l">Downstream consequences</div><div class="v">${outs.length?escapeHtml(outs.join(', ')):'Terminal outcome.'}</div></div>
+    ${be.node_kind==='fault'?`<div class="si-field"><div class="l">Engine KPIs</div><div class="v" style="font-size:11px;line-height:1.7">
+      containment_rate <b>${k.containment_rate}</b><br>detection_rate <b>${k.detection_rate}</b><br>
+      time_to_first_detection <b>${Math.round(k.time_to_first_detection_s||0)}s</b><br>mean_time_to_resolve <b>${Math.round(k.mean_time_to_resolve_s||0)}s</b><br>
+      operator score <b>${res.scores.operator}</b></div></div>`:''}
+    ${objs.length?`<div class="si-field"><div class="l">Objectives</div><div class="v" style="line-height:1.7">${objs.map(o=>`<div><i class="${o.met?'ri-checkbox-circle-fill':'ri-close-circle-fill'}" style="color:${o.met?'var(--green)':'var(--crimson)'}"></i> ${escapeHtml(o.text)}</div>`).join('')}</div></div>`:''}
+    <div class="si-field"><div class="l">Affected assets</div><div class="v">${CATASSET[n.cat]||'—'}</div></div>
+    <div class="si-field"><div class="l">Recommended intervention</div><div class="v" style="border-left:3px solid var(--cyan)">${CATINTERV[n.cat]||'Review mitigation'}</div></div>`;
+}
+/* playback */
+function updatePlay(){const g=B.base;if(!g)return;const end=simEnd(g);const pct=B.playhead/end*100;
+  if($('simFill')){$('simFill').style.width=pct+'%';$('simKnob').style.left=pct+'%';$('simTime').textContent='+'+Math.round(B.playhead)+'m / '+end+'m';}
+  document.querySelectorAll('#simTimeline .r').forEach(r=>r.style.opacity=(+r.dataset.t<=B.playhead?1:.4));drawSim();}
+function simTogglePlay(){if(!B.base)return;B.playing=!B.playing;$('simPlay').innerHTML=B.playing?'<i class="ri-pause-fill"></i>':'<i class="ri-play-fill"></i>';if(B.playing)simLoop();}
+function simLoop(){cancelAnimationFrame(B.raf);const g=B.base;const end=simEnd(g);if(B.playhead>=end)B.playhead=0;let last=null;
+  const step=ts=>{if(!B.playing)return;if(last==null)last=ts;const dt=(ts-last)/1000;last=ts;B.playhead=Math.min(end,B.playhead+dt*end/8);updatePlay();if(B.playhead>=end){B.playing=false;$('simPlay').innerHTML='<i class="ri-play-fill"></i>';return;}B.raf=requestAnimationFrame(step);};B.raf=requestAnimationFrame(step);}
+function simRestartPlay(){if(!B.base)return;B.playhead=0;B.playing=true;$('simPlay').innerHTML='<i class="ri-pause-fill"></i>';simLoop();}
+function simSeek(ev){const g=B.base;if(!g)return;const r=$('simScrub').getBoundingClientRect();const end=simEnd(g);B.playing=false;$('simPlay').innerHTML='<i class="ri-play-fill"></i>';B.playhead=Math.max(0,Math.min(end,(ev.clientX-r.left)/r.width*end));updatePlay();}
+/* what-if compare + save */
+function metricsOf(g){const im=computeImpacts(g),T=g.backend.totals,k=g.backend.nodes[0].result.kpis||{};
+  return {delay:simEnd(g),consequences:T.downstream_consequences,preventable:T.preventable_consequences,
+    safety:Math.max(0,100-im.Safety),readiness:g.backend.config.readiness,
+    contained:T.certified_faults+'/'+T.fault_nodes,mttr:Math.round(k.mean_time_to_resolve_s||0)+'s',downtime:simEnd(g)};}
+/* The "intervention" is a SECOND REAL RUN on the engine at higher operator readiness —
+   not a locally faked graph. The engine decides whether the preventable branch still fires. */
+async function openCompare(){
+  if(!B.base){toast('Run a simulation first','ri-error-warning-line');return;}
+  const rg=B.base.backend,raise=Math.min(100,rg.config.readiness+22);
+  if(raise===rg.config.readiness){toast('Already at maximum readiness','ri-information-line');return;}
+  $('compareBody').innerHTML='<div style="padding:40px;text-align:center;color:var(--text-faint)">Re-running on the engine at readiness '+raise+'…</div>';
+  $('compareModal').classList.add('open');
+  let impGraph;
+  try{impGraph=mapRunGraph(await runGraphFor(rg.scenario_id,raise,rg.domain));}
+  catch(e){$('compareBody').innerHTML='<div style="padding:40px;text-align:center;color:var(--crimson)">Engine error — '+escapeHtml(e.message)+'</div>';return;}
+  const A=metricsOf(B.base),Bm=metricsOf(impGraph);
+  const rows=[['Cascade duration',A.delay+' min',Bm.delay+' min','down'],
+    ['Downstream consequences',A.consequences,Bm.consequences,'down'],
+    ['Preventable consequences',A.preventable,Bm.preventable,'down'],
+    ['Faults contained',A.contained,Bm.contained,'up'],
+    ['Mean time to resolve',A.mttr,Bm.mttr,'down'],
+    ['Safety score',A.safety,Bm.safety,'up'],
+    ['Operator readiness',A.readiness,Bm.readiness,'up']];
+  $('compareBody').innerHTML=`<div style="padding:14px 20px 0;font-size:11.5px;color:var(--text-faint)">Two real engine runs of <b>${escapeHtml(rg.scenario_name)}</b> — readiness <b>${A.readiness}</b> vs <b>${Bm.readiness}</b>. Every number below comes from <span class="mono">POST /runs/graph</span>.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px">
+      <div class="card"><div class="card-title"><i class="ri-alert-line" style="color:var(--crimson)"></i>Readiness ${A.readiness}</div>${cmpMini(B.base)}</div>
+      <div class="card"><div class="card-title"><i class="ri-shield-check-line" style="color:var(--green)"></i>Readiness ${Bm.readiness}</div>${cmpMini(impGraph)}</div></div>
+    <div class="card" style="margin:0 20px 20px"><div class="card-title"><i class="ri-scales-3-line"></i>Outcome comparison</div>
+      ${rows.map(r=>{const na=parseFloat(r[1]),nb=parseFloat(r[2]);const better=r[3]==='down'?nb<na:nb>na;const same=na===nb;const c=same?'var(--text-faint)':better?'var(--green)':'var(--crimson)';return `<div class="cmpm"><div class="ml">${r[0]}</div><div class="a">${r[1]}</div><div class="arr">→</div><div class="b" style="color:${c}">${r[2]}</div></div>`;}).join('')}</div>`;
+}
+function cmpMini(g){const cnt=Object.keys(g.nodes).length;const avg=(Object.values(g.nodes).reduce((a,n)=>a+n.sev,0)/cnt).toFixed(1);const bars=Object.values(g.nodes).sort((a,b)=>a.t-b.t).slice(0,9);
+  return `<div style="display:flex;gap:14px;margin-bottom:10px"><div><div style="font-family:var(--mono);font-size:9px;color:var(--text-faint)">NODES</div><div style="font-size:20px;font-weight:800">${cnt}</div></div><div><div style="font-family:var(--mono);font-size:9px;color:var(--text-faint)">AVG SEVERITY</div><div style="font-size:20px;font-weight:800">${avg}</div></div></div>${bars.map(n=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0"><div style="width:118px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.label)}</div><div style="flex:1;height:7px;border-radius:4px;background:var(--panel-3)"><div style="width:${n.sev*20}%;height:100%;border-radius:4px;background:${SEVC[n.sev]}"></div></div></div>`).join('')}`;
+}
+function closeCompare(){$('compareModal').classList.remove('open');}
+function saveSimulation(){if(!B.base){toast('Run a simulation first','ri-error-warning-line');return;}try{const arr=JSON.parse(localStorage.getItem('nx_saved')||'[]');arr.unshift({name:(($('scnName')&&$('scnName').value)||'Scenario'),at:new Date().toLocaleString(),nodes:Object.keys(B.base.nodes).length,stages:B.stages.length});localStorage.setItem('nx_saved',JSON.stringify(arr.slice(0,30)));}catch(e){}toast('Simulation saved to Knowledge Hub','ri-save-3-line');}
+function initBuilder(){renderStages();buildFromStages();drawGraph('builderSvg',curGraph.nodes,curGraph.edges);renderInspector(curGraph.nodes[curSel]);renderOutcomes();renderPredicted();fitG();}
+
+/* ---- add / remove / edit blocks ---- */
+function addBlockTo(parentId,label,color,expl){
+  const p=curGraph.nodes[parentId]||Object.values(curGraph.nodes)[0];const id='n'+(nodeCounter++);
+  const sib=curGraph.edges.filter(e=>e.from===parentId).length;
+  const dy=(sib%2?1:-1)*80*(1+Math.floor(sib/2));
+  curGraph.nodes[id]={x:(p?p.x+236:420),y:(p?Math.max(20,p.y+dy):250),w:184,h:52,color:color||'cyan',
+    label:label||'New Consequence',sub:color==='cyan'?'outcome':color==='violet'?'human decision':color==='crimson'?'equipment':'derived state',
+    expl:expl||'Manually added block — edit its label and category in the inspector.'};
+  if(p)curGraph.edges.push({from:parentId,to:id,hot:color!=='cyan'});
+  drawGraph('builderSvg',curGraph.nodes,curGraph.edges);selectNode(id);renderOutcomes();
+}
+function addBlock(){if(!curGraph)return;addBlockTo(curSel||curGraph.firstId,'New Consequence','cyan');toast('Block added — drag it into place','ri-add-box-line');}
+function deleteBlock(){if(!curGraph||!curSel)return;const id=curSel;delete curGraph.nodes[id];curGraph.edges=curGraph.edges.filter(e=>e.from!==id&&e.to!==id);
+  curSel=Object.keys(curGraph.nodes)[0]||null;drawGraph('builderSvg',curGraph.nodes,curGraph.edges);
+  if(curSel){curGraph.nodes[curSel].selected=true;renderInspector(curGraph.nodes[curSel]);}else $('inspector').innerHTML='<div class="empty-hint">No blocks. Describe a scenario to generate a cascade.</div>';
+  renderOutcomes();toast('Block removed','ri-delete-bin-line');}
+function setNodeLabel(v){if(curSel&&curGraph.nodes[curSel]){curGraph.nodes[curSel].label=v;drawGraph('builderSvg',curGraph.nodes,curGraph.edges);renderOutcomes();}}
+function setNodeColor(c){if(curSel&&curGraph.nodes[curSel]){const n=curGraph.nodes[curSel];n.color=c;n.sub=(c==='cyan'?'outcome':c==='violet'?'human decision':c==='crimson'?'equipment':'environmental');drawGraph('builderSvg',curGraph.nodes,curGraph.edges);renderInspector(n);renderOutcomes();}}
+function aiCompleteChain(){if(!curGraph){renderBuilder('Equipment fault propagates into an operational and financial impact');return;}
+  const parent=curGraph.nodes.shutdown?'shutdown':curSel||curGraph.firstId;
+  const opts=[['Supply Chain Delay','cyan'],['Regulatory Report','cyan'],['Downtime Cost','cyan'],['Customer Impact','cyan'],['Crew Overtime','violet']];
+  const pick=opts[Object.keys(curGraph.nodes).length%opts.length];
+  addBlockTo(parent,pick[0],pick[1],'AI-added downstream link inferred from the pattern library.');
+  toast('AI added a downstream consequence','ri-sparkling-2-fill');
+}
+/* ---- outcomes / summary ---- */
+function graphDepth(){const g=curGraph;const indeg={};Object.keys(g.nodes).forEach(id=>indeg[id]=0);g.edges.forEach(e=>{if(g.nodes[e.to])indeg[e.to]=(indeg[e.to]||0)+1;});
+  const adj={};g.edges.forEach(e=>(adj[e.from]=adj[e.from]||[]).push(e.to));const dep={};const q=Object.keys(g.nodes).filter(id=>!indeg[id]);q.forEach(id=>dep[id]=0);const seen=new Set(q);let max=0;
+  while(q.length){const id=q.shift();(adj[id]||[]).forEach(to=>{if(!g.nodes[to])return;dep[to]=Math.max(dep[to]??0,(dep[id]||0)+1);max=Math.max(max,dep[to]);if(!seen.has(to)){seen.add(to);q.push(to);}});}return max;}
+const IMPACTS=['High operational impact','Cost & downtime driver','Safety-relevant outcome','Customer / delivery impact','Compliance exposure'];
+function impactFor(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return IMPACTS[h%IMPACTS.length];}
+function renderOutcomes(){const g=curGraph;if(!g){$('outcomesCard').innerHTML='';return;}
+  const outs=Object.values(g.nodes).filter(n=>n.color==='cyan');
+  const chip=(v,l)=>`<div class="sum-chip"><div class="sv">${v}</div><div class="sl">${l}</div></div>`;
+  $('outcomesCard').innerHTML=`
+    <div class="card-title"><i class="ri-flag-2-line"></i>Projected Outcomes &amp; Summary<span class="right">the output of this scenario chain</span></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:14px">${chip(Object.keys(g.nodes).length,'Blocks')}${chip(g.edges.length,'Links')}${chip(outs.length,'Outcomes')}${chip(graphDepth(),'Chain depth')}</div>
+    <div class="out-strip">${outs.map(n=>`<div class="out-card"><div class="ot">${escapeHtml(n.label)}</div><div class="os">${impactFor(n.label)}</div></div>`).join('')||'<div class="empty-hint">No outcome blocks yet — add one and set its category to “Outcome”.</div>'}</div>`;
+}
+
+/* seed builder default */
+initBuilder();
+
+/* ---- REPORTS graphs ---- */
+function staticGraph(svgId,nodes,edges){drawStatic(svgId,nodes,edges);}
+function drawStatic(svgId,nodes,edges){const svg=$(svgId);if(!svg)return;const ns='http://www.w3.org/2000/svg';svg.innerHTML='';
+  edges.forEach(e=>{const a=nodes[e.from],b=nodes[e.to];const p=document.createElementNS(ns,'path');const mx=(a.x+a.w+b.x)/2;
+    p.setAttribute('d',`M${a.x+a.w} ${a.y+a.h/2} C ${mx} ${a.y+a.h/2}, ${mx} ${b.y+b.h/2}, ${b.x} ${b.y+b.h/2}`);p.setAttribute('class',e.hot?'edge-flow':'edge-path');svg.appendChild(p);});
+  Object.values(nodes).forEach(n=>{const g=document.createElementNS(ns,'g');const r=document.createElementNS(ns,'rect');
+    r.setAttribute('x',n.x);r.setAttribute('y',n.y);r.setAttribute('width',n.w);r.setAttribute('height',n.h);r.setAttribute('rx',9);r.setAttribute('fill','#fff');r.setAttribute('stroke',`var(--${n.color})`);r.setAttribute('stroke-width',1.4);g.appendChild(r);
+    const d=document.createElementNS(ns,'circle');d.setAttribute('cx',n.x+13);d.setAttribute('cy',n.y+n.h/2);d.setAttribute('r',4);d.setAttribute('fill',`var(--${n.color})`);g.appendChild(d);
+    const t=document.createElementNS(ns,'text');t.setAttribute('x',n.x+24);t.setAttribute('y',n.y+n.h/2-1);t.setAttribute('class','node-label');t.textContent=n.label;g.appendChild(t);
+    const s=document.createElementNS(ns,'text');s.setAttribute('x',n.x+24);s.setAttribute('y',n.y+n.h/2+12);s.setAttribute('class','node-sub');s.textContent=n.sub;g.appendChild(s);svg.appendChild(g);});
+}
+/* ===== REPORTS — rendered from the real run (was: hardcoded GPS-spoofing demo) ===== */
+const RISK_BG=[['#eef2f8','#f4ecdd','#f7e2d6','#fadfe1'],['#eef2f8','#f0eee0','#f4e3cf','#f7d9d6'],['#e6f3ec','#eaf0da','#f4e3cf','#f4e3cf'],['#e6f3ec','#e6f3ec','#eaf0da','#f4e3cf']];
+function renderReports(){
+  const g=B.base;
+  if(!g){
+    $('repSub').textContent='Run a simulation to generate a report.';
+    ['repMetrics','repRecs','repEvidence'].forEach(id=>{if($(id))$(id).innerHTML='<div style="color:var(--text-faint);font-size:11.5px;padding:12px 0">No run yet — go to the Scenario Builder and click Run Simulation.</div>';});
+    if($('evoSvgReports'))$('evoSvgReports').innerHTML='';
+    if($('riskMatrix'))$('riskMatrix').innerHTML='';
+    return;
+  }
+  const rg=g.backend,T=rg.totals,root=rg.nodes[0],cl=root.result.summary.clearance||{},k=root.result.kpis||{};
+  const end=simEnd(g),worst=rg.nodes.filter(n=>n.impact_level==='critical').length;
+
+  $('repSub').textContent=`${rg.scenario_name} · run ${rg.root_run_id.slice(0,8)} · readiness ${rg.config.readiness} · ${rg.config.difficulty} · ${T.total_nodes} nodes / ${T.max_depth} deep`;
+
+  /* exec metrics — all four straight from the engine */
+  const m=(label,val,sub,color)=>`<div class="exec-metric"><div class="exec-metric-label">${label}</div><div class="exec-metric-val"${color?` style="color:${color}"`:''}>${val}</div><div class="exec-metric-sub">${sub}</div></div>`;
+  $('repMetrics').innerHTML=
+    m('Fault Contained',cl.certified?'Yes':'No',`${T.certified_faults}/${T.fault_nodes} faults certified`,cl.certified?'var(--green)':'var(--crimson)')+
+    m('Time to Resolve',Math.round(k.mean_time_to_resolve_s||0)+'s',`Detected at ${Math.round(k.time_to_first_detection_s||0)}s`)+
+    m('Consequences',T.downstream_consequences,`${worst} critical · cascade ${end} min`,worst?'var(--amber)':'')+
+    m('Preventable',T.preventable_consequences,T.preventable_consequences?'Avoidable had the fault been contained':'None — all inherent',T.preventable_consequences?'var(--crimson)':'var(--green)');
+
+  /* root cause & consequence chain — same drawStatic renderer, real nodes */
+  const sn={},se=[];
+  const cols={};rg.nodes.forEach(n=>{const d=g.nodes[n.run_id].depth;(cols[d]=cols[d]||[]).push(n);});
+  const maxRows=Math.max(...Object.values(cols).map(a=>a.length));
+  Object.keys(cols).map(Number).forEach(d=>{const col=cols[d],off=(maxRows-col.length)/2;
+    col.forEach((n,i)=>{const ui=g.nodes[n.run_id];
+      sn[n.run_id]={x:10+d*182,y:14+(i+off)*60,w:166,h:44,label:fitText(n.scenario_name,20),
+        sub:(n.node_kind==='fault'?'root cause':n.category)+' · '+n.impact_level,color:ui.color};});});
+  rg.edges.forEach(e=>se.push({from:e.parent_run_id,to:e.child_run_id,hot:e.preventable}));
+  const svgW=Math.max(760,10+(T.max_depth+1)*182),svgH=Math.max(230,14+maxRows*60);
+  $('evoSvgReports').setAttribute('viewBox',`0 0 ${svgW} ${svgH}`);
+  drawStatic('evoSvgReports',sn,se);
+
+  /* risk matrix — one dot per real node, placed by impact_level × how many causes fed it */
+  const rm=$('riskMatrix');rm.innerHTML='';
+  const IMP_ROW={low:0,medium:1,high:2,critical:3};
+  const placed={};
+  rg.nodes.forEach(n=>{
+    const row=IMP_ROW[n.impact_level]||0;
+    const causes=rg.edges.filter(e=>e.child_run_id===n.run_id);
+    const likely=n.node_kind==='fault'?3:Math.min(3,causes.filter(e=>!e.preventable).length?3:1+causes.length);
+    (placed[row+'|'+likely]=placed[row+'|'+likely]||[]).push(n);
+  });
+  for(let r=3;r>=0;r--)for(let c=0;c<4;c++){
+    const cell=document.createElement('div');cell.className='riskcell';cell.style.background=RISK_BG[r][c];
+    const hits=placed[r+'|'+c]||[];
+    if(hits.length){cell.textContent=hits.length>1?hits.length:'●';cell.style.color=SEVC[BE_SEV[hits[0].impact_level]||3];
+      cell.title=hits.map(h=>h.scenario_name).join(', ');cell.style.cursor='help';}
+    rm.appendChild(cell);
+  }
+
+  /* recommendations — from the edges the engine actually fired */
+  const byRun={};rg.nodes.forEach(n=>byRun[n.run_id]=n);
+  let recs=rg.edges.filter(e=>e.preventable).map((e,i)=>
+    `<div class="rec-item"><div class="rec-num">${String(i+1).padStart(2,'0')}</div><div class="rec-txt">Raise readiness so <b>${escapeHtml(byRun[e.parent_run_id].scenario_name)}</b> is contained — that alone prevents <b>${escapeHtml(byRun[e.child_run_id].scenario_name)}</b> (fired on <span class="mono">${escapeHtml(e.condition)}</span>).</div><span class="tag tag-crimson">PREVENTABLE</span></div>`);
+  const inherent=rg.edges.filter(e=>!e.preventable);
+  recs=recs.concat(inherent.slice(0,3).map((e,i)=>
+    `<div class="rec-item"><div class="rec-num">${String(recs.length+i+1).padStart(2,'0')}</div><div class="rec-txt">Mitigate <b>${escapeHtml(byRun[e.child_run_id].scenario_name)}</b> — an inherent consequence of ${escapeHtml(byRun[e.parent_run_id].scenario_name)} (+${e.delay_min} min lag). It cannot be prevented, only absorbed.</div><span class="tag tag-amber">MITIGATE</span></div>`));
+  $('repRecs').innerHTML=recs.join('')||'<div style="color:var(--text-faint);padding:10px 0">No cascade fired.</div>';
+
+  /* evidence chain — the engine's own clearance evidence + objectives */
+  const objs=(root.result.objectives||{}).operator||[];
+  $('repEvidence').innerHTML=
+    (cl.evidence||[]).map(ev=>`<div class="pattern-row"><div class="pattern-freq"><i class="ri-shield-check-line" style="color:var(--cyan)"></i></div><div class="pattern-body"><div class="pattern-title" style="font-weight:500;font-size:11.5px;line-height:1.5">${escapeHtml(ev)}</div></div></div>`).join('')+
+    objs.map(o=>`<div class="pattern-row"><div class="pattern-freq"><i class="${o.met?'ri-checkbox-circle-fill':'ri-close-circle-fill'}" style="color:${o.met?'var(--green)':'var(--crimson)'}"></i></div><div class="pattern-body"><div class="pattern-title">${escapeHtml(o.text)}</div><div class="pattern-sub">objective · ${o.met?'met':'NOT met'}</div></div></div>`).join('')+
+    `<div class="pattern-row"><div class="pattern-freq"><i class="ri-fingerprint-line" style="color:var(--cyan)"></i></div><div class="pattern-body"><div class="pattern-title mono" style="font-size:10.5px">${escapeHtml(rg.root_run_id)}</div><div class="pattern-sub">deterministic run id · same inputs reproduce this exact cascade</div></div></div>`;
+}
+function exportRunJson(){
+  if(!B.rg){toast('Run a simulation first','ri-error-warning-line');return;}
+  const blob=new Blob([JSON.stringify(B.rg,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=B.rg.scenario_id+'.'+B.rg.root_run_id.slice(0,8)+'.json';a.click();
+  URL.revokeObjectURL(a.href);toast('Run graph exported','ri-braces-line');
+}
+
+drawStatic('evoSvgKnowledge',{
+  leak:{x:10,y:84,w:150,h:44,label:'Hydraulic Leak',sub:'origin scenario',color:'crimson'},
+  pressure:{x:200,y:84,w:150,h:44,label:'Pressure Loss',sub:'v2.1',color:'amber'},
+  v1:{x:400,y:14,w:170,h:44,label:'Repair Postponed',sub:'branch v2.2',color:'violet'},
+  v2:{x:400,y:84,w:170,h:44,label:'Pump Failure',sub:'branch v2.3',color:'crimson'},
+  v3:{x:400,y:154,w:170,h:44,label:'Spare Parts Shortage',sub:'branch v2.4',color:'amber'},
+  out1:{x:640,y:14,w:230,h:44,label:'Flight Delay + Congestion',sub:'derived outcome',color:'cyan'},
+  out2:{x:640,y:154,w:230,h:44,label:'Financial Impact Report',sub:'derived outcome',color:'cyan'},
+},[{from:'leak',to:'pressure',hot:true},{from:'pressure',to:'v1',hot:true},{from:'pressure',to:'v2'},{from:'pressure',to:'v3'},{from:'v1',to:'out1',hot:true},{from:'v2',to:'out2'},{from:'v3',to:'out2'}]);
+
+/* risk matrix + reports chain are now rendered from the real run — see renderReports() */
+
+/* simulation results + playback are handled in the stage-console module above */
+
+/* ---- misc actions ---- */
+function convertIncident(name){toast('“'+name+'” filed as a new simulation scenario','ri-git-branch-line');}
+function onSearch(v){if(v.trim().length>1){nav('library');$('libSearch').value=v;renderLibrary();}}
+
+/* init */
+buildFilters();renderLibrary();renderReports();
+
+/* Phase 3: Railway is the domain whose scenarios are registered in the engine, so open
+   on it and pull its real scenario library. Other packs keep the local demo behaviour
+   until their scenarios are wired the same way. */
+(function bootBackend(){
+  const rw=domains.findIndex(d=>d.key==='railway');
+  if(rw>=0){domainIdx=rw;$('domainIcon').className=domains[rw].icon;$('domainSelect').value=rw;}
+  loadBackendScenarios('railway');
+  api('/health').then(h=>{
+    const es=document.querySelector('.enginestat-txt');
+    if(es)es.innerHTML='<b>Engine Online</b><span>'+h.app+' · deterministic core</span>';
+  }).catch(()=>{
+    const es=document.querySelector('.enginestat-txt'),dot=document.querySelector('.enginestat .dot');
+    if(es)es.innerHTML='<b>Engine Offline</b><span>backend unreachable</span>';
+    if(dot)dot.style.background='var(--crimson)';
+    toast('Backend unreachable — start FastAPI and reload','ri-error-warning-line');
+  });
+})();
+
+const _h=location.hash.slice(1);if(_h){const[_v,_d]=_h.split('/');if(_d!=null&&domains[+_d])setDomain(+_d);if(_v==='run'){nav('builder');runSimulation();}else if(viewNames[_v])nav(_v);}
+</script>
+</body>
+</html>

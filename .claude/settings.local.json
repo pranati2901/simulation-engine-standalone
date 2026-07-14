@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"/c/Users/prana/Downloads/simulation-engine-scaffold \\(3\\)\" && find . -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' | head -200)",
+      "Read(//c/Users/prana/Downloads/simulation-engine-scaffold \\\\\\(3\\\\\\)/**)"
+    ]
+  }
+}

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Railway Simulation Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
+<style>
+:root{
+  --bg:#eef1f7;--panel:#fff;--panel2:#f5f7fb;--panel3:#eceff5;--line:#e3e7f0;--line2:#d6dbe6;
+  --text:#141a27;--dim:#5a6478;--faint:#98a1b5;--cyan:#2f6bf6;--cyan-dim:#1e4fc4;--cyan-soft:rgba(47,107,246,.1);
+  --amber:#d9871a;--amber-soft:rgba(217,135,26,.13);--red:#e5484d;--red-soft:rgba(229,72,77,.11);
+  --violet:#7c5cff;--violet-soft:rgba(124,92,255,.11);--green:#12a074;--green-soft:rgba(18,160,116,.12);
+  --s1:#12a074;--s2:#c9a70e;--s3:#e08420;--s4:#e5484d;--s5:#a01722;--grey:#c3cad8;
+  --font:'Inter',system-ui,sans-serif;--disp:'Space Grotesk',var(--font);--mono:'JetBrains Mono',monospace;
+  --shadow:0 1px 2px rgba(20,26,40,.04),0 8px 24px rgba(20,26,40,.07);--shadow-lg:0 16px 48px rgba(20,26,40,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#cfd6e4;border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+button{font-family:var(--font);cursor:pointer;border:0}
+.mono{font-family:var(--mono)}
+
+/* topbar */
+.topbar{display:flex;align-items:center;gap:18px;padding:0 22px;height:58px;background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .m{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--cyan),#5a4bd6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;box-shadow:0 4px 12px rgba(47,107,246,.3)}
+.brand b{font-family:var(--disp);font-size:15px;letter-spacing:-.01em;display:block}
+.brand span{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--faint);text-transform:uppercase}
+.stepper{display:flex;align-items:center;gap:4px;margin:0 auto}
+.step{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;font-size:11.5px;font-weight:600;color:var(--faint);white-space:nowrap}
+.step .no{width:19px;height:19px;border-radius:50%;background:var(--panel3);color:var(--faint);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700}
+.step.done{color:var(--green)}.step.done .no{background:var(--green);color:#fff}
+.step.on{color:var(--cyan);background:var(--cyan-soft)}.step.on .no{background:var(--cyan);color:#fff}
+.step .sep{color:var(--line2)}
+.stepwrap{display:flex;align-items:center;gap:2px}.stepwrap .sep{color:var(--line2);font-size:13px;margin:0 1px}
+.tb-actions{display:flex;align-items:center;gap:9px}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;padding:9px 15px;border-radius:9px;border:1px solid var(--line2);background:#fff;color:var(--dim);transition:.13s}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn i{font-size:15px}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(47,107,246,.28)}
+.btn-primary:hover{filter:brightness(1.07);color:#fff}
+.btn.ghost{background:var(--panel2)}
+
+/* console */
+.console{flex:1;display:grid;grid-template-columns:340px 1fr 340px;gap:0;min-height:0}
+.col{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.col.left{border-right:1px solid var(--line);background:var(--panel)}
+.col.center{background:var(--bg)}
+.col.right{border-left:1px solid var(--line);background:var(--panel)}
+.colhead{display:flex;align-items:center;gap:8px;font-family:var(--disp);font-weight:700;font-size:13px}
+.colhead i{color:var(--cyan);font-size:16px}
+.colhead .sub{font-weight:400;font-size:10.5px;color:var(--faint);font-family:var(--font)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;box-shadow:var(--shadow)}
+.col.left .card,.col.right .card{box-shadow:none;background:var(--panel2)}
+.ct{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:11px;display:flex;align-items:center;gap:7px}
+.ct .r{margin-left:auto;text-transform:none;letter-spacing:0}
+label.fl{display:block;font-size:11px;color:var(--dim);font-weight:600;margin:11px 0 5px}
+input[type=text],textarea,select{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:var(--text);font-family:var(--font);font-size:12.5px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--cyan)}
+textarea{resize:vertical;min-height:46px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+input[type=range]{width:100%;accent-color:var(--cyan)}
+
+/* chips (faults / conditions) */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:7px 11px;border-radius:8px;border:1px solid var(--line2);background:#fff;color:var(--dim);cursor:pointer;transition:.12s}
+.chip:hover{border-color:var(--cyan)}
+.chip.on{background:var(--cyan-soft);border-color:var(--cyan);color:var(--cyan)}
+.chip i{font-size:14px}
+.chip.cond.on{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+
+/* preset cards */
+.preset{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;cursor:pointer;transition:.13s;margin-bottom:9px}
+.preset:hover{border-color:var(--cyan);transform:translateY(-1px);box-shadow:var(--shadow)}
+.preset .pt{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.preset .pn{font-weight:650;font-size:12.5px}
+.preset .pd{font-size:10.5px;color:var(--faint);margin:6px 0}
+.preset .pf{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:10px;color:var(--dim)}
+.preset .prun{font-size:10.5px;color:var(--cyan);font-weight:700}
+.sev-pill{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;color:#fff}
+.mini{font-family:var(--mono);font-size:10px;color:var(--faint);display:flex;gap:5px;align-items:center}
+
+/* readiness gauge */
+.gauge{display:flex;align-items:center;gap:15px}
+.qlab{font-family:var(--mono);font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+
+/* impact gauges */
+.impact{margin:11px 0}
+.impact .top{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px}
+.impact .top b{font-weight:600}.impact .top .v{font-family:var(--mono);font-weight:700}
+.impact .bar{height:8px;border-radius:5px;background:var(--panel3);overflow:hidden}
+.impact .bar>div{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* cascade graph */
+.graphwrap{flex:1;min-height:340px;overflow:auto;border:1px solid var(--line);border-radius:13px;background:
+  radial-gradient(circle at 1px 1px,#e5e8f0 1px,transparent 0) 0 0/24px 24px,#fbfcfe;position:relative}
+.gnode{cursor:pointer}
+.edge{fill:none;stroke:#cdd4e2;stroke-width:1.7}
+.edge.pred{stroke:var(--grey);stroke-dasharray:5 6}
+.edge.hot{stroke:#aeb7c8;stroke-width:2}
+.nl{font-family:var(--font);font-size:11px;font-weight:600;fill:var(--text)}
+.ns{font-family:var(--mono);font-size:8px;fill:var(--faint)}
+.legend{display:flex;gap:11px;flex-wrap:wrap;font-size:10px;color:var(--faint);margin-top:2px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}
+.hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--faint);text-align:center;padding:30px}
+.hint i{font-size:34px;opacity:.4}
+
+/* timeline */
+.tl{position:relative;padding-left:78px}
+.tl .row{position:relative;padding:8px 0;border-left:2px solid var(--line);margin-left:0;padding-left:18px}
+.tl .row:before{content:'';position:absolute;left:-7px;top:13px;width:11px;height:11px;border-radius:50%;background:#fff;border:2.5px solid var(--dim)}
+.tl .row .tm{position:absolute;left:-78px;top:9px;width:52px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.tl .row .ti{font-weight:650;font-size:12.5px}.tl .row .td{font-size:10.5px;color:var(--dim)}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(20,26,40,.28);opacity:0;pointer-events:none;transition:.2s;z-index:40}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:400px;max-width:92vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:41;overflow-y:auto}
+.drawer.open{transform:translateX(0)}
+.drawer .dh{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.dh h3{font-size:16px;margin-top:3px}
+.db{padding:16px 18px 40px}
+.sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600;margin:16px 0 6px}
+.kv{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
+.iconbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);display:flex;align-items:center;justify-content:center;font-size:15px}
+.iconbtn:hover{color:var(--cyan);border-color:var(--cyan)}
+.fl-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:4px 9px;color:var(--dim);font-weight:600;margin:0 5px 5px 0}
+
+/* rec / rootcause */
+.rec{display:flex;gap:11px;padding:11px 0;align-items:flex-start}.rec+.rec{border-top:1px solid var(--line)}
+.rec .ri{width:32px;height:32px;border-radius:9px;background:var(--cyan-soft);color:var(--cyan);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+.rec .rt{font-weight:650;font-size:12.5px}.rec .rd{font-size:11px;color:var(--dim);margin-top:2px}
+.rec .gain{font-family:var(--mono);font-size:10px;color:var(--green);font-weight:700;margin-top:4px}
+.rec .apply{margin-left:auto;font-size:10.5px;color:var(--cyan);font-weight:700;white-space:nowrap;cursor:pointer;flex-shrink:0}
+
+/* compare modal */
+.modal{position:fixed;inset:0;background:rgba(20,26,40,.4);z-index:50;display:none;align-items:center;justify-content:center;padding:34px}
+.modal.open{display:flex}
+.modal-c{background:var(--bg);border-radius:16px;width:100%;max-width:900px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-h{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0}
+.modal-h h3{font-family:var(--disp);font-size:16px}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+.cmp-metric{display:flex;align-items:center;gap:12px;padding:11px 0}.cmp-metric+.cmp-metric{border-top:1px solid var(--line)}
+.cmp-metric .ml{flex:1;font-size:12px;color:var(--dim);font-weight:600}
+.cmp-metric .a{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--faint);width:70px;text-align:right}
+.cmp-metric .arr{color:var(--faint)}
+.cmp-metric .b{font-family:var(--mono);font-size:16px;font-weight:800;width:70px;text-align:right}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);z-index:60;opacity:0;transition:.24s;pointer-events:none;display:flex;gap:8px;align-items:center}
+.toast i{color:var(--cyan)}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><div class="m"><i class="ri-train-line"></i></div><div><b>Railway Simulation Console</b><span>NextXR · Operations</span></div></div>
+  <div class="stepper" id="stepper"></div>
+  <div class="tb-actions">
+    <button class="btn ghost" onclick="resetAll()"><i class="ri-refresh-line"></i>Reset</button>
+    <button class="btn btn-primary" id="flowBtn" onclick="advance()"><i class="ri-flashlight-line"></i>Preview Cascade</button>
+  </div>
+</div>
+
+<div class="console">
+  <!-- LEFT: SCENARIO BUILDER -->
+  <div class="col left">
+    <div class="colhead"><i class="ri-draft-line"></i>Scenario Builder<span class="sub">— compose the situation</span></div>
+    <div class="card">
+      <div class="ct"><i class="ri-file-text-line"></i>Definition</div>
+      <input type="text" id="scnName" placeholder="Scenario name" value="Peak-Hour Signal Failure — Northern Line" oninput="touch()">
+      <label class="fl">Domain</label>
+      <select disabled><option>Railway Operations</option></select>
+      <label class="fl">Description</label>
+      <textarea id="scnDesc" oninput="touch()">A signal block fails during the evening peak. The operator must contain it before congestion and safety consequences cascade across the line.</textarea>
+    </div>
+
+    <div class="card">
+      <div class="ct"><i class="ri-error-warning-line"></i>Inject faults<span class="r">initial events</span></div>
+      <div class="chips" id="faultChips"></div>
+      <div class="mini" style="margin-top:10px"><i class="ri-information-line"></i> Select one, or several for a combination scenario.</div>
+    </div>
+
+    <div class="card">
+      <div class="ct"><i class="ri-cloud-windy-line"></i>Environment &amp; conditions</div>
+      <div class="chips" id="condChips"></div>
+      <div class="grid2" style="margin-top:12px">
+        <div><label class="fl">Time of day</label><select id="timeOfDay" onchange="touch()"><option>Peak (AM)</option><option selected>Peak (PM)</option><option>Off-peak</option><option>Night</option></select></div>
+        <div><label class="fl">Weather</label><select id="weather" onchange="touch()"><option>Clear</option><option selected>Rain</option><option>Storm</option><option>Fog</option></select></div>
+        <div><label class="fl">Passenger load</label><select id="paxLoad" onchange="touch()"><option>Light</option><option>Moderate</option><option selected>Heavy</option><option>Crush</option></select></div>
+        <div><label class="fl">Network load</label><select id="netLoad" onchange="touch()"><option>Normal</option><option selected>High</option><option>Saturated</option></select></div>
+        <div><label class="fl">Maintenance status</label><select id="maint" onchange="touch()"><option selected>Current</option><option>Overdue</option><option>Deferred</option></select></div>
+        <div><label class="fl">Staffing</label><select id="staff" onchange="touch()"><option selected>Full</option><option>Reduced</option><option>Skeleton</option></select></div>
+      </div>
+      <label class="fl" style="margin-top:12px">Operator readiness — <b id="rdVal">62</b></label>
+      <input type="range" id="readiness" min="0" max="100" value="62" oninput="rdVal.textContent=this.value;touch()">
+    </div>
+
+    <div class="card">
+      <div class="ct"><i class="ri-stack-line"></i>Preset library</div>
+      <div id="presetList"></div>
+    </div>
+  </div>
+
+  <!-- CENTER: CASCADE VISUALIZATION -->
+  <div class="col center">
+    <div class="colhead"><i class="ri-git-branch-line"></i>Cascade Visualization<span class="sub" id="cascSub">— predicted propagation</span></div>
+    <div class="card" style="flex:1;display:flex;flex-direction:column;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div class="legend" id="legend"></div>
+        <span class="mini" id="cascState"><i class="ri-eye-line"></i> prediction · click Run to simulate</span>
+      </div>
+      <div class="graphwrap" id="graphwrap"><div class="hint"><i class="ri-git-branch-line"></i><div>Build a scenario on the left, then <b>Preview Cascade</b>.</div></div></div>
+    </div>
+    <div class="card hidden" id="timelineCard">
+      <div class="ct"><i class="ri-time-line"></i>Live event timeline<span class="r" id="tlDur"></span></div>
+      <div id="timeline"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: SIMULATION INSIGHTS -->
+  <div class="col right">
+    <div class="colhead"><i class="ri-dashboard-3-line"></i>Simulation Insights<span class="sub">— readiness &amp; impact</span></div>
+    <div class="card">
+      <div class="ct"><i class="ri-shield-check-line"></i>Readiness &amp; resilience</div>
+      <div id="readinessGauge"></div>
+    </div>
+    <div class="card">
+      <div class="ct"><i class="ri-bar-chart-box-line"></i>Impact dashboard</div>
+      <div id="impactBoard"></div>
+    </div>
+    <div class="card hidden" id="rootcauseCard">
+      <div class="ct"><i class="ri-focus-3-line"></i>Root-cause analysis</div>
+      <div id="rootcause"></div>
+    </div>
+    <div class="card hidden" id="interventionCard">
+      <div class="ct"><i class="ri-lightbulb-flash-line"></i>Recommended interventions</div>
+      <div id="interventions"></div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer"></div>
+<div class="modal" id="compareModal"><div class="modal-c">
+  <div class="modal-h"><h3>What-if Comparison</h3><button class="iconbtn" onclick="closeCompare()"><i class="ri-close-line"></i></button></div>
+  <div id="compareBody"></div>
+</div></div>
+<div class="toast" id="toast"><i class="ri-checkbox-circle-fill"></i><span id="toastMsg"></span></div>
+
+<script>
+const $=id=>document.getElementById(id);
+function toast(m,i){const t=$("toast");$("toastMsg").textContent=m;t.querySelector('i').className=(i||'ri-checkbox-circle-fill');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000);}
+const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const SEVC=['','#12a074','#c9a70e','#e08420','#e5484d','#a01722'],SEVN=['','Minor','Moderate','Elevated','Severe','Critical'];
+const FAULTS=[
+ {k:'signal_failure',n:'Signal Failure',ic:'ri-error-warning-line',sys:'Signalling'},
+ {k:'brake_failure',n:'Brake Failure',ic:'ri-shut-down-line',sys:'Rolling stock'},
+ {k:'track_obstruction',n:'Track Obstruction',ic:'ri-road-map-line',sys:'Track'},
+ {k:'comms_failure',n:'Communication Failure',ic:'ri-wifi-off-line',sys:'Comms'},
+ {k:'power_failure',n:'Power Failure',ic:'ri-flashlight-line',sys:'Traction power'},
+ {k:'human_error',n:'Human Error',ic:'ri-user-line',sys:'Operations'},
+ {k:'maintenance_delay',n:'Maintenance Delay',ic:'ri-tools-line',sys:'Maintenance'},
+];
+const CONDS=[
+ {k:'rain',n:'Heavy Rain',ic:'ri-rainy-line',pen:10},{k:'peak',n:'Peak Hour',ic:'ri-group-line',pen:14},
+ {k:'reduced_staff',n:'Reduced Staff',ic:'ri-team-line',pen:12},{k:'heat',n:'Heatwave',ic:'ri-sun-line',pen:8},
+ {k:'flood',n:'Flooding',ic:'ri-water-flash-line',pen:12},
+];
+const CHAINS={
+ signal_failure:[['Signal Block Failure','signalling',2],['Speed Restrictions','operational',2],['Train Delay','operational',3],['Platform Congestion','passenger',3]],
+ brake_failure:[['Brake System Failure','rollingstock',3],['Emergency Stop','safety',4],['Line Blocked','operational',3]],
+ track_obstruction:[['Track Obstruction','track',3],['Line Closure','operational',4],['Rerouting','operational',3]],
+ comms_failure:[['Comms Failure','comms',2],['Manual Working','operational',3],['Reduced Throughput','operational',3]],
+ power_failure:[['Traction Power Loss','power',3],['Signalling Down','signalling',4],['Trains Stranded','safety',4]],
+ human_error:[['Operator Error','human',2],['Incorrect Routing','operational',3],['Near-miss','safety',4]],
+ maintenance_delay:[['Maintenance Overdue','maintenance',2],['Asset Degradation','infrastructure',3],['Unplanned Failure','rollingstock',4]],
+};
+const PRESETS=[
+ {faults:['signal_failure'],conds:['peak'],n:'Peak Signal Failure',sev:4,sys:'Signalling · Passenger',dur:'~35 min',imp:'Line-wide delay'},
+ {faults:['power_failure'],conds:['peak'],n:'Traction Power Loss',sev:5,sys:'Power · Safety',dur:'~50 min',imp:'Evacuation risk'},
+ {faults:['track_obstruction','signal_failure'],conds:['rain'],n:'Storm — Track & Signal',sev:5,sys:'Track · Signalling',dur:'~60 min',imp:'Multi-line closure'},
+ {faults:['brake_failure'],conds:[],n:'Brake Failure — Rush',sev:4,sys:'Rolling stock · Safety',dur:'~30 min',imp:'Emergency stop'},
+];
+const CATASSET={signalling:'Signal blocks, interlocking',operational:'Timetable, control room',passenger:'Platforms, concourse',safety:'Passengers, crew',rollingstock:'Train units, brakes',track:'Track, points',comms:'Radio, GSM-R',power:'OLE / third rail',human:'Operators, drivers',infrastructure:'Depots, structures',maintenance:'Maintenance fleet',financial:'Revenue, penalties'};
+const CATINTERV={signalling:'Activate contingency signalling',operational:'Deploy contingency timetable',passenger:'Deploy additional station staff & crowd control',safety:'Trigger emergency-response protocol earlier',rollingstock:'Withdraw & replace the unit',track:'Dispatch track-response team',comms:'Switch to backup comms / manual working',power:'Switch to backup feeder',human:'Second-person verification on routing',infrastructure:'Bring maintenance forward',maintenance:'Increase maintenance frequency',financial:'Activate delay-repay mitigation'};
+
+let S={faults:new Set(['signal_failure']),conds:new Set(['peak']),readiness:62,stage:'build',cascade:null,live:false,sel:null,base:null};
+
+/* ---- builder chips / presets ---- */
+$('faultChips').innerHTML=FAULTS.map(f=>`<div class="chip ${S.faults.has(f.k)?'on':''}" data-f="${f.k}" onclick="toggleFault('${f.k}')"><i class="${f.ic}"></i>${f.n}</div>`).join('');
+$('condChips').innerHTML=CONDS.map(c=>`<div class="chip cond ${S.conds.has(c.k)?'on':''}" onclick="toggleCond('${c.k}')"><i class="${c.ic}"></i>${c.n}</div>`).join('');
+$('presetList').innerHTML=PRESETS.map((p,i)=>`<div class="preset" onclick="loadPreset(${i})">
+  <div class="pt"><span class="pn">${p.n}</span><span class="sev-pill" style="background:${SEVC[p.sev]}">${SEVN[p.sev]}</span></div>
+  <div class="pd">${p.sys}</div>
+  <div class="pf"><span class="mini"><i class="ri-time-line"></i>${p.dur}</span><span class="mini"><i class="ri-alert-line"></i>${p.imp}</span><span class="prun" style="margin-left:auto">Run ▸</span></div></div>`).join('');
+function toggleFault(k){S.faults.has(k)?S.faults.delete(k):S.faults.add(k);document.querySelector(`[data-f="${k}"]`).classList.toggle('on');touch();}
+function toggleCond(k){S.conds.has(k)?S.conds.delete(k):S.conds.add(k);event.currentTarget.classList.toggle('on');touch();}
+function loadPreset(i){const p=PRESETS[i];S.faults=new Set(p.faults);S.conds=new Set(p.conds);
+  $('faultChips').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',S.faults.has(c.dataset.f)));
+  $('condChips').querySelectorAll('.chip').forEach((c,idx)=>c.classList.toggle('on',S.conds.has(CONDS[idx].k)));
+  $('scnName').value=p.n;toast('Preset loaded — previewing','ri-stack-line');S.readiness=+$('readiness').value;buildAndPreview();}
+function touch(){S.readiness=+$('readiness').value;if(S.stage!=='build'){setStage('build');clearLive();}}
+
+/* ---- cascade generation (frontend, illustrative) ---- */
+let nid=0;
+function addN(nodes,label,cat,sev,ex={}){const id='n'+(nid++);nodes[id]={label,cat,sev:Math.min(5,Math.max(1,Math.round(sev))),...ex};return id;}
+function layout(nodes,edges){
+  const indeg={};Object.keys(nodes).forEach(id=>indeg[id]=0);edges.forEach(e=>indeg[e.to]=(indeg[e.to]||0)+1);
+  const adj={};edges.forEach(e=>(adj[e.from]=adj[e.from]||[]).push(e.to));
+  const dep={};let q=Object.keys(nodes).filter(id=>!indeg[id]);q.forEach(id=>dep[id]=0);const seen=new Set(q);
+  while(q.length){const id=q.shift();(adj[id]||[]).forEach(t=>{dep[t]=Math.max(dep[t]??0,(dep[id]||0)+1);if(!seen.has(t)){seen.add(t);q.push(t);}});}
+  Object.keys(nodes).forEach(id=>{nodes[id].depth=dep[id]??0;});
+  const byD={};Object.entries(nodes).forEach(([id,n])=>(byD[n.depth]=byD[n.depth]||[]).push(id));
+  const W=166,H=54,cg=52,rg=18,mx=22,my=22;const maxR=Math.max(1,...Object.values(byD).map(a=>a.length));
+  Object.keys(byD).map(Number).forEach(d=>{const col=byD[d],off=(maxR-col.length)/2;col.forEach((id,i)=>{const n=nodes[id];n.x=mx+d*(W+cg);n.y=my+(i+off)*(H+rg);n.w=W;n.h=H;});});
+  let mxx=0;Object.values(nodes).forEach(n=>mxx=Math.max(mxx,n.x+n.w));
+  return {w:mxx+mx,h:my*2+maxR*(H+rg)};
+}
+function buildCascade(readiness){
+  nid=0;const nodes={},edges=[];const faults=[...S.faults],conds=[...S.conds];
+  const effR=Math.max(0,readiness-conds.reduce((a,k)=>a+CONDS.find(c=>c.k===k).pen,0));
+  const bump=Math.min(2,Math.floor(conds.length/2))+(effR<45?1:0);
+  let root=null;const heads=[];
+  if(faults.length>1)root=addN(nodes,'Combined Incident','operational',3,{note:faults.length+' concurrent faults'});
+  const list=faults.length?faults:['signal_failure'];
+  list.forEach(fk=>{let prev=root;CHAINS[fk].forEach((c,i)=>{const id=addN(nodes,c[0],c[1],c[2]+(i>1?bump:0));if(prev)edges.push({from:prev,to:id,hot:i<1});prev=id;});heads.push(prev);});
+  const cn={peak:['Passenger Panic','passenger',4],reduced_staff:['Slow Response','human',4],rain:['Track Speed Limits','operational',3],heat:['Track Buckling Risk','infrastructure',3],flood:['Flooded Track','infrastructure',4]};
+  conds.forEach(ck=>{if(cn[ck]){const id=addN(nodes,cn[ck][0],cn[ck][1],cn[ck][2]+(effR<50?1:0));edges.push({from:heads[0],to:id});heads.push(id);}});
+  const conv=addN(nodes,'Service Suspension','operational',5);heads.forEach(h=>edges.push({from:h,to:conv,hot:true}));
+  let last=conv;const outs=[];
+  if(effR<72)outs.push(['Passenger Build-up','passenger',4]);
+  if(effR<55)outs.push(['Medical Emergency','safety',5]);
+  outs.push(['Station Closure','operational',5]);outs.push(['Financial Impact','financial',4]);
+  outs.forEach(o=>{const id=addN(nodes,o[0],o[1],o[2]);edges.push({from:last,to:id,hot:true});last=id;});
+  const vb=layout(nodes,edges);
+  const step=Math.max(3,8-Math.floor(effR/18));
+  Object.values(nodes).forEach((n,i)=>{n.t=n.depth*step+(i%3);});
+  return {nodes,edges,vb,effR,firstId:root||Object.keys(nodes)[0]};
+}
+
+/* ---- draw ---- */
+function fit(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+function drawGraph(){
+  const g=S.cascade,live=S.live,svgns='http://www.w3.org/2000/svg';
+  $('legend').innerHTML=live?SEVN.slice(1).map((n,i)=>`<span><i style="background:${SEVC[i+1]}"></i>${n}</span>`).join(''):`<span><i style="background:var(--grey)"></i>predicted path (not yet run)</span>`;
+  let edges='',nodes='';
+  g.edges.forEach(e=>{const a=g.nodes[e.from],b=g.nodes[e.to];if(!a||!b)return;const mx=(a.x+a.w+b.x)/2;
+    const cls=live?(e.hot?'edge hot':'edge'):'edge pred';
+    edges+=`<path d="M${a.x+a.w} ${a.y+a.h/2} C ${mx} ${a.y+a.h/2}, ${mx} ${b.y+b.h/2}, ${b.x} ${b.y+b.h/2}" class="${cls}"/>`;});
+  Object.entries(g.nodes).forEach(([id,n])=>{const col=live?SEVC[n.sev]:'var(--grey)';const sel=S.sel===id;
+    nodes+=`<g class="gnode" onclick="openNode('${id}')">
+      ${sel?`<rect x="${n.x-3}" y="${n.y-3}" width="${n.w+6}" height="${n.h+6}" rx="12" fill="none" stroke="var(--cyan)" stroke-width="1.4" opacity=".4"/>`:''}
+      <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="10" fill="#fff" stroke="${sel?'var(--cyan)':col}" stroke-width="${sel?2.2:1.6}"/>
+      <rect x="${n.x}" y="${n.y}" width="4" height="${n.h}" rx="2" fill="${col}"/>
+      <circle cx="${n.x+18}" cy="${n.y+18}" r="4" fill="${col}"/>
+      <text x="${n.x+30}" y="${n.y+21}" class="nl">${esc(fit(n.label,20))}</text>
+      <text x="${n.x+14}" y="${n.y+40}" class="ns">${live?SEVN[n.sev].toUpperCase()+' · +'+n.t+'m':(n.cat)}</text>
+    </g>`;});
+  $('graphwrap').innerHTML=`<svg width="${g.vb.w}" height="${g.vb.h}" viewBox="0 0 ${g.vb.w} ${g.vb.h}" style="min-width:100%">${edges}${nodes}</svg>`;
+}
+
+/* ---- insights ---- */
+function gauge(val,size){size=size||120;const r=size/2-9,cx=size/2,cy=size/2;
+  const arc=(f,t,c,w)=>{const a0=Math.PI+Math.PI*f,a1=Math.PI+Math.PI*t;return `<path d="M${cx+r*Math.cos(a0)},${cy+r*Math.sin(a0)} A${r},${r} 0 0 1 ${cx+r*Math.cos(a1)},${cy+r*Math.sin(a1)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;};
+  const q=val>=80?['Excellent','var(--green)']:val>=60?['Strong','var(--green)']:val>=40?['Moderate','var(--amber)']:['Fragile','var(--red)'];
+  const na=Math.PI+Math.PI*(val/100),nx=cx+(r-6)*Math.cos(na),ny=cy+(r-6)*Math.sin(na);
+  return `<div class="gauge"><svg width="${size}" height="${size/2+14}" viewBox="0 0 ${size} ${size/2+14}">
+    ${arc(0,1,'var(--panel3)',9)}${arc(0,.4,'var(--red)',9)}${arc(.4,.6,'var(--amber)',9)}${arc(.6,1,'var(--green)',9)}
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="var(--text)" stroke-width="2.4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="4" fill="var(--text)"/>
+    <text x="${cx}" y="${cy-5}" text-anchor="middle" font-size="19" font-weight="800" fill="var(--text)">${val}</text></svg>
+    <div><div class="qlab">Expected resilience</div><div style="font-weight:750;font-size:15px;color:${q[1]}">${q[0]}</div>
+    <div style="font-size:10.5px;color:var(--dim);margin-top:3px;max-width:140px">Containment ${val>=60?'holds — cascade is limited':val>=40?'partial — some spread likely':'weak — full cascade likely'}.</div></div></div>`;
+}
+function renderReadiness(){const effR=S.cascade?S.cascade.effR:Math.max(0,S.readiness-[...S.conds].reduce((a,k)=>a+CONDS.find(c=>c.k===k).pen,0));$('readinessGauge').innerHTML=gauge(effR);}
+const IMPACT_DEF=[['Operational','ri-timer-flash-line',n=>['operational','signalling','comms'].includes(n.cat),18],
+  ['Passenger','ri-group-line',n=>n.cat==='passenger',12],['Financial','ri-money-dollar-circle-line',null,40],
+  ['Safety','ri-alarm-warning-line',n=>n.cat==='safety',12],['Infrastructure','ri-building-2-line',n=>['infrastructure','track','power','rollingstock','maintenance'].includes(n.cat),16]];
+function computeImpacts(g){const ns=Object.values(g.nodes);const out={};
+  IMPACT_DEF.forEach(([name,ic,f,max])=>{let v;if(name==='Financial')v=ns.length*2+ns.filter(n=>n.cat==='financial').reduce((a,n)=>a+n.sev*3,0);else v=ns.filter(f).reduce((a,n)=>a+n.sev,0);out[name]=Math.min(100,Math.round(v/max*100));});return out;}
+function renderImpacts(){const g=S.cascade;
+  if(!g||!S.live){$('impactBoard').innerHTML=`<div style="font-size:11.5px;color:var(--faint);padding:6px 0">Run the simulation to project operational, passenger, financial, safety and infrastructure impact.</div>`;return;}
+  const im=computeImpacts(g);
+  $('impactBoard').innerHTML=IMPACT_DEF.map(([name,ic])=>{const v=im[name],c=v>=70?'var(--red)':v>=45?'var(--amber)':'var(--green)';
+    return `<div class="impact"><div class="top"><b><i class="${ic}" style="color:${c};margin-right:5px"></i>${name}</b><span class="v" style="color:${c}">${v}</span></div><div class="bar"><div style="width:${v}%;background:${c}"></div></div></div>`;}).join('');
+}
+function renderRootcause(){const g=S.cascade;const faults=[...S.faults].map(k=>FAULTS.find(f=>f.k===k).n);const conds=[...S.conds].map(k=>CONDS.find(c=>c.k===k).n);
+  const crit=Object.values(g.nodes).find(n=>n.cat==='operational'&&n.sev>=5);const first=Object.values(g.nodes)[0];
+  $('rootcause').innerHTML=`
+    <div style="margin-bottom:9px"><div class="qlab">Root cause</div><div style="font-weight:650">${faults.join(' + ')||'Signal Failure'}</div></div>
+    <div style="margin-bottom:9px"><div class="qlab">Contributing factors</div><div>${conds.length?conds.join(', '):'nominal conditions'}</div></div>
+    <div style="margin-bottom:9px"><div class="qlab">Critical decision point</div><div>${crit?esc(crit.label):'Service Suspension'} — last moment to contain</div></div>
+    <div style="padding:9px 11px;border-radius:9px;background:var(--green-soft);border:1px solid #bfe6d6"><div class="qlab" style="color:var(--green)">Earliest preventable moment</div><div style="font-size:12px;margin-top:2px">${esc(first.label)} — intervening here stops most downstream consequences.</div></div>`;
+}
+function renderInterventions(){const g=S.cascade;const cats=[...new Set(Object.values(g.nodes).map(n=>n.cat))];
+  const seen=new Set(),recs=[];
+  cats.forEach(c=>{const t=CATINTERV[c];if(t&&!seen.has(t)){seen.add(t);recs.push([c,t]);}});
+  const gains=['Downtime −32%','Delay −41%','Safety +2 grades','Containment +28%','Passenger impact −35%'];
+  $('interventions').innerHTML=recs.slice(0,5).map((r,i)=>`<div class="rec"><div class="ri"><i class="ri-shield-flash-line"></i></div>
+    <div style="flex:1"><div class="rt">${r[1]}</div><div class="rd">Targets the ${r[0]} branch of the cascade.</div><div class="gain">▲ projected: ${gains[i%gains.length]}</div></div>
+    <span class="apply" onclick="runCompare()">Apply ▸</span></div>`).join('');
+}
+function renderInsights(){renderReadiness();renderImpacts();
+  $('rootcauseCard').classList.toggle('hidden',!S.live);$('interventionCard').classList.toggle('hidden',!S.live);
+  if(S.live){renderRootcause();renderInterventions();}}
+
+/* ---- timeline ---- */
+function renderTimeline(){const g=S.cascade;const rows=Object.values(g.nodes).sort((a,b)=>a.t-b.t);
+  const end=Math.max(...rows.map(r=>r.t));$('tlDur').textContent='0 → '+end+' min';
+  $('timeline').innerHTML=`<div class="tl">${rows.map(n=>`<div class="row" style="border-left-color:${SEVC[n.sev]}"><div class="tm">+${String(n.t).padStart(2,'0')}m</div><div class="ti">${esc(n.label)}</div><div class="td">${SEVN[n.sev]} · ${n.cat}</div></div>`).join('')}</div>`;
+}
+
+/* ---- node drawer ---- */
+function openNode(id){const g=S.cascade,n=g.nodes[id];if(!n)return;S.sel=id;drawGraph();
+  const incoming=g.edges.filter(e=>e.to===id).map(e=>g.nodes[e.from].label);
+  const outs=g.edges.filter(e=>e.from===id).map(e=>g.nodes[e.to]);
+  const prob=Math.min(96,55+n.sev*8+(S.cascade.effR<50?8:0));
+  $('drawer').innerHTML=`<div class="dh"><div><div class="qlab">${n.cat.toUpperCase()} NODE</div><h3>${esc(n.label)}</h3>
+    <span class="sev-pill" style="background:${SEVC[n.sev]};margin-top:6px;display:inline-block">${SEVN[n.sev]}</span></div>
+    <button class="iconbtn" onclick="closeDrawer()"><i class="ri-close-line"></i></button></div>
+    <div class="db">
+      <div class="sec">Cause</div><div class="kv">${incoming.length?esc(incoming.join(', ')):'Initial injected event — origin of the cascade.'}</div>
+      <div class="sec">Trigger</div><div class="kv">${S.live?('Fires at +'+n.t+' min once upstream state is reached'):'Predicted — condition on upstream node'}</div>
+      <div class="sec">Downstream consequences</div><div>${outs.length?outs.map(o=>`<span class="fl-tag" style="border-left:3px solid ${SEVC[o.sev]}">${esc(o.label)}</span>`).join(''):'<span class="kv" style="display:inline-block">Terminal outcome — nothing downstream.</span>'}</div>
+      <div class="sec">Affected assets</div><div class="kv">${CATASSET[n.cat]||'—'}</div>
+      <div class="sec">Estimated operational impact</div><div class="kv">${['','Minor local delay','Moderate service impact','Elevated line impact','Severe multi-line impact','Critical network impact'][n.sev]}</div>
+      <div class="sec">Probability</div><div class="kv">${prob}%</div>
+      <div class="sec">Recommended intervention</div><div class="kv" style="border-left:3px solid var(--cyan)">${CATINTERV[n.cat]||'Review mitigation options'}</div>
+    </div>`;
+  $('drawer').classList.add('open');$('scrim').classList.add('open');
+}
+function closeDrawer(){$('drawer').classList.remove('open');$('scrim').classList.remove('open');S.sel=null;if(S.cascade)drawGraph();}
+
+/* ---- what-if compare ---- */
+function metrics(g){const im=computeImpacts(g);const end=Math.max(...Object.values(g.nodes).map(n=>n.t));
+  return {delay:end,consequences:Object.keys(g.nodes).length-1,safety:Math.max(0,100-im.Safety),readiness:g.effR,downtime:end};}
+function runCompare(){if(!S.base)return;
+  const improved=buildCascade(Math.min(100,S.readiness+22));  // "intervention applied" ≈ higher effective readiness
+  const A=metrics(S.base),B=metrics(improved);
+  const rows=[['Total delay',A.delay+' min',B.delay+' min','down'],['Consequences',A.consequences,B.consequences,'down'],
+    ['Safety score',A.safety,B.safety,'up'],['Readiness score',A.readiness,B.readiness,'up'],['Estimated downtime',A.downtime+' min',B.downtime+' min','down']];
+  $('compareBody').innerHTML=`<div style="padding:16px 20px 0"><span class="mini"><i class="ri-information-line"></i> Original scenario vs. the same scenario with the recommended intervention applied.</span></div>
+    <div class="cmp-grid">
+      <div class="card"><div class="ct"><i class="ri-alert-line" style="color:var(--red)"></i>Original</div>${miniGraph(S.base)}</div>
+      <div class="card"><div class="ct"><i class="ri-shield-check-line" style="color:var(--green)"></i>Intervention applied</div>${miniGraph(improved)}</div>
+    </div>
+    <div class="card" style="margin:0 18px 18px"><div class="ct"><i class="ri-scales-3-line"></i>Outcome comparison</div>
+      ${rows.map(r=>{const na=parseFloat(r[1]),nb=parseFloat(r[2]);const better=r[3]==='down'?nb<na:nb>na;const c=better?'var(--green)':nb===na?'var(--faint)':'var(--red)';
+        return `<div class="cmp-metric"><div class="ml">${r[0]}</div><div class="a">${r[1]}</div><div class="arr">→</div><div class="b" style="color:${c}">${r[2]}</div></div>`;}).join('')}</div>`;
+  $('compareModal').classList.add('open');setStage('compare');
+}
+function miniGraph(g){const cnt=Object.keys(g.nodes).length;const sevAvg=(Object.values(g.nodes).reduce((a,n)=>a+n.sev,0)/cnt).toFixed(1);
+  const bars=Object.values(g.nodes).sort((a,b)=>a.t-b.t).slice(0,10);
+  return `<div style="display:flex;gap:14px;margin-bottom:10px"><div><div class="qlab">Nodes</div><div style="font-family:var(--disp);font-size:20px;font-weight:700">${cnt}</div></div><div><div class="qlab">Avg severity</div><div style="font-family:var(--disp);font-size:20px;font-weight:700">${sevAvg}</div></div></div>
+    ${bars.map(n=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0"><div style="width:130px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.label)}</div><div style="flex:1;height:7px;border-radius:4px;background:var(--panel3)"><div style="width:${n.sev*20}%;height:100%;border-radius:4px;background:${SEVC[n.sev]}"></div></div></div>`).join('')}`;
+}
+function closeCompare(){$('compareModal').classList.remove('open');}
+
+/* ---- flow / stages ---- */
+const STAGES=[['build','Build Scenario','ri-draft-line'],['preview','Preview Cascade','ri-git-branch-line'],['run','Run Simulation','ri-play-circle-line'],['inspect','Inspect Results','ri-search-eye-line'],['compare','Compare What-if','ri-scales-3-line'],['export','Export','ri-download-2-line']];
+function renderStepper(){const ci=STAGES.findIndex(s=>s[0]===S.stage);
+  $('stepper').innerHTML=`<div class="stepwrap">`+STAGES.map((s,i)=>`${i?'<span class="sep">›</span>':''}<div class="step ${i<ci?'done':''} ${i===ci?'on':''}"><span class="no">${i<ci?'✓':i+1}</span>${s[1]}</div>`).join('')+`</div>`;}
+function setStage(st){S.stage=st;renderStepper();
+  const btn=$('flowBtn');const map={build:['Preview Cascade','ri-flashlight-line'],preview:['Run Simulation','ri-play-fill'],run:['Compare What-if','ri-scales-3-line'],inspect:['Compare What-if','ri-scales-3-line'],compare:['Export report','ri-download-2-line'],export:['Export report','ri-download-2-line']};
+  btn.innerHTML=`<i class="${map[st][1]}"></i>${map[st][0]}`;
+}
+function clearLive(){S.live=false;S.cascade=null;S.base=null;$('cascState').innerHTML='<i class="ri-eye-line"></i> prediction · click Run to simulate';$('cascSub').textContent='— predicted propagation';
+  $('timelineCard').classList.add('hidden');$('graphwrap').innerHTML=`<div class="hint"><i class="ri-git-branch-line"></i><div>Build a scenario on the left, then <b>Preview Cascade</b>.</div></div>`;renderInsights();$('legend').innerHTML='';}
+function buildAndPreview(){S.cascade=buildCascade(S.readiness);S.live=false;drawGraph();renderReadiness();renderImpacts();
+  $('cascState').innerHTML='<i class="ri-eye-line"></i> predicted cascade · grey = not yet run';$('cascSub').textContent='— predicted propagation';setStage('preview');}
+function runSim(){S.base=buildCascade(S.readiness);S.cascade=S.base;S.live=true;drawGraph();renderTimeline();$('timelineCard').classList.remove('hidden');
+  $('cascState').innerHTML='<i class="ri-checkbox-circle-fill" style="color:var(--green)"></i> simulated · severity-coloured';$('cascSub').textContent='— simulated propagation';renderInsights();setStage('inspect');toast('Simulation complete — insights ready','ri-checkbox-circle-fill');}
+function advance(){
+  if(S.stage==='build'){if(!S.faults.size){toast('Inject at least one fault first','ri-error-warning-line');return;}buildAndPreview();}
+  else if(S.stage==='preview'){runSim();}
+  else if(S.stage==='run'||S.stage==='inspect'){if(!S.base){runSim();}runCompare();}
+  else{toast('Report exported (demo — PDF/JSON)','ri-download-2-line');setStage('export');}
+}
+function resetAll(){S.faults=new Set(['signal_failure']);S.conds=new Set(['peak']);$('readiness').value=62;$('rdVal').textContent='62';S.readiness=62;
+  $('faultChips').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',S.faults.has(c.dataset.f)));
+  $('condChips').querySelectorAll('.chip').forEach((c,i)=>c.classList.toggle('on',S.conds.has(CONDS[i].k)));
+  clearLive();setStage('build');closeDrawer();closeCompare();toast('Console reset','ri-refresh-line');}
+
+/* init */
+renderStepper();setStage('build');renderInsights();
+const _h=location.hash.slice(1);if(_h==='preview')buildAndPreview();else if(_h==='run'||_h==='inspect')runSim();else if(_h==='compare'){runSim();runCompare();}
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/python.exe -c ' *)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/Microsoft/Edge/Application/**)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "Bash(GOALCERT_DATABASE_URL=postgresql+psycopg://u:p@db:5432/goalcert GOALCERT_CORS_ORIGINS='[\"http://localhost:3000\",\"http://localhost:5173\"]' ./venv/Scripts/python.exe -c ' *)",
+      "Bash(./venv/Scripts/python.exe -m uvicorn app.main:app --port 8077)",
+      "Bash(curl -s http://127.0.0.1:8077/health)",
+      "Bash(curl -s \"http://127.0.0.1:8077/scenarios?domain=railway\")",
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(json.dumps\\([{k:s[k] for k in \\('id','name','node_kind','category','impact_level','description'\\)} for s in d],indent=1\\)\\)\")",
+      "Bash(curl -s -X POST http://127.0.0.1:8077/runs/graph -H \"Content-Type: application/json\" -d '{\"scenario_id\":\"railway.signal_failure_v1\",\"config\":{\"readiness\":30,\"domain\":\"railway\"}}')",
+      "Bash(python -m json.tool)",
+      "Bash(grep -n \"^const B=\\\\|^function domFaults\\\\|^function runSimulation\\\\|^function simEnsure\\\\|^function computeImpacts\\\\|^function renderSimTimeline\\\\|^function renderSimRoot\\\\|^function renderSimInterv\\\\|^function renderSimResults\\\\|^function openCompare\\\\|^function buildImproved\\\\|^function metricsOf\\\\|^function openSimNode\\\\|^function initBuilder\\\\|^function drawSim\\\\|^function updatePlay\\\\|^const DOM_FAULTS\\\\|^const FAULTS\\\\|^function effReadiness\\\\|^buildFilters\\\\|^/\\\\* init \\\\*/\\\\|^/\\\\* seed builder\\\\|^initBuilder\\\\|^const _h\\\\|^function renderPredicted\\\\|^function saveSimulation\\\\|^function nav\\\\|id=\\\\\"view-reports\\\\\"\\\\|exec-metric\\\\|id=\\\\\"riskMatrix\\\\\"\\\\|evoSvgReports\" index.html)",
+      "Bash(python -c ' *)",
+      "Bash(node --check /tmp/app.js)",
+      "Bash(npm init *)",
+      "Bash(npm i *)",
+      "Bash(npx playwright *)",
+      "Bash(node e2e.js)"
+    ]
+  }
+}
