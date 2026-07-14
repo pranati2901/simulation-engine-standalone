@@ -19,7 +19,22 @@
       "Bash(npm init *)",
       "Bash(npm i *)",
       "Bash(npx playwright *)",
-      "Bash(node e2e.js)"
+      "Bash(node e2e.js)",
+      "Bash(cd \"C:/Users/prana/Downloads\" && ls -la *.zip 2>/dev/null; echo \"---\"; ls -d */ 2>/dev/null | head -20)",
+      "Read(//c/Users/prana/Downloads/**)",
+      "Read(//c/Users/prana/Downloads/Goalcert_Hub/**)",
+      "Bash(rm -rf services/simulation-engine/backend/app/static)",
+      "Bash(./.venv/Scripts/python.exe -m pip install -q -r hub/backend/requirements.txt)",
+      "Bash(./.venv/Scripts/python.exe -m pip install -q -r services/simulation-engine/backend/requirements.txt)",
+      "Bash(./.venv/Scripts/python.exe -c \"import fastapi, sqlalchemy, jwt, bcrypt, httpx, pydantic_settings; print\\('all deps OK'\\)\")",
+      "Read(//c/Users/prana/Downloads/Goalcert_Hub/hub/web/**)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"hub up? %{http_code}\\\\n\" http://127.0.0.1:8090/health)",
+      "Bash(curl -s -X POST http://127.0.0.1:8090/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"owner@goalcert.io\",\"password\":\"Simulation2026!\"}')"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\services\\simulation-engine",
+      "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\hub\\web\\src\\modules\\simulation"
     ]
   }
 }

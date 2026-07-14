@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     )
     scenario_api_key: str = Field(default="", validation_alias="SCENARIO_API_KEY")
 
+    # ── Scenario authoring (natural language -> a runnable Scenario) ──
+    # The engine calls Claude directly for authoring. It does NOT call an LLM to
+    # *simulate* anything — the cascade stays deterministic. The model only writes the
+    # scenario spec; engine/graph.py still computes what happens.
+    anthropic_api_key: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
+    authoring_model: str = Field(default="claude-opus-4-8", validation_alias="AUTHORING_MODEL")
+
     class Config:
         env_file = ".env"
 

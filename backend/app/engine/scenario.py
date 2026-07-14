@@ -22,6 +22,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from .catalog.spec import ActionSpec
 from .environment import EnvironmentSpec
 
 
@@ -118,6 +119,17 @@ class Scenario(BaseModel):
     objectives: list[ScenarioObjective] = Field(default_factory=list)
     recommended_environment: EnvironmentSpec | None = None
     tags: list[str] = Field(default_factory=list)
+
+    # Actions this scenario needs that its domain plugin does not ship.
+    #
+    # A plugin's catalog is registered in memory at import time. A scenario, by contrast,
+    # is PERSISTED (loader.py -> ScenarioORM). So an authored scenario that introduced a
+    # new action used to work until the next restart and then die with
+    # `KeyError: Unknown action '...'` — the scenario came back from the database, its
+    # vocabulary did not. Carrying the ActionSpecs on the scenario itself means they are
+    # persisted in the same JSON blob and re-registered whenever it is loaded
+    # (loader.py::_materialise). A scenario is now self-contained: it can always run.
+    custom_actions: list[ActionSpec] = Field(default_factory=list)
 
     # Dynamic Scenario Graph metadata (used by the cascade graph view — engine/graph.py):
     #   node_kind    — "fault": a competency-check node (scored, certified/failed);

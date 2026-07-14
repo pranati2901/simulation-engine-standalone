@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..scenarios.loader import get_scenario, scenarios_for_domain
-from ..services.agent_client import author_scenario_from_nl
+from ..services.authoring import AuthoringError, author_scenario
 
 router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 
@@ -34,6 +34,18 @@ class AuthorRequest(BaseModel):
 
 @router.post("/author")
 async def author(req: AuthorRequest):
-    """Author a runnable scenario spec from natural language, via the Agentic AI."""
-    response = await author_scenario_from_nl(req.domain, req.prompt)
-    return response.result
+    """Author a runnable Scenario from natural language, and register it.
+
+    The model writes the SPEC — the fault, the decision gate, the objectives, and the
+    cascade triggers. It does not simulate: once registered, engine/graph.py computes
+    the cascade deterministically, exactly as it does for a hand-written scenario. The
+    returned scenario is immediately runnable via POST /runs/graph.
+
+    422 (not 500) on an authoring failure: an unusable prompt or a model that kept
+    naming actions this domain doesn't have is a request problem, not a server fault,
+    and the detail says which.
+    """
+    try:
+        return await author_scenario(req.domain, req.prompt)
+    except AuthoringError as e:
+        raise HTTPException(422, str(e))
