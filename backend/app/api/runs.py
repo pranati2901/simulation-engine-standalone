@@ -46,6 +46,17 @@ def get_run_graph(root_run_id: str):
     return rg
 
 
+@router.get("/{run_id}/events")
+def get_run_events(run_id: str):
+    """Return events for a run from the engine's event log."""
+    record = run_manager.get_run(run_id)
+    if record is None:
+        raise HTTPException(404, f"Unknown run '{run_id}'")
+    if record.result is None:
+        return []
+    return [evt.model_dump(mode="json") for evt in record.result.events]
+
+
 @router.get("/{run_id}")
 def get_run(run_id: str):
     record = run_manager.get_run(run_id)

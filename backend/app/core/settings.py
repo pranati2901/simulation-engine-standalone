@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         validation_alias="GOALCERT_CORS_ORIGINS",
     )
     scenario_api_key: str = Field(default="", validation_alias="SCENARIO_API_KEY")
+    anthropic_api_key: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
 
     class Config:
         env_file = ".env"
