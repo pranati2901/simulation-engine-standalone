@@ -35,16 +35,6 @@ class RunORM(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-class CustomActionORM(Base):
-    """Actions authored at request time (AI scenario authoring) — persisted so the
-    in-memory action catalog can be re-populated on startup (see app/main.py)."""
-    __tablename__ = "custom_actions"
-
-    key = Column(String, primary_key=True)
-    domain = Column(String, index=True, nullable=False)
-    data = Column(JSON, nullable=False)  # full ActionSpec pydantic model, as JSON
-
-
 class TripwireSession(Base):
     __tablename__ = "tripwire_sessions"
 

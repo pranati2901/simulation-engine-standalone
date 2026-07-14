@@ -36,16 +36,27 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 
 from pydantic import BaseModel, Field, ValidationError
 
 from ..core.settings import settings
 from ..engine.catalog.spec import ActionSpec, actions_for_domain, register_action
+from ..engine.environment import ActorSpec, EnvironmentSpec
 from ..engine.models.actors import actor_types_for_domain
 from ..engine.models.resources import resource_types_for_domain
-from ..engine.scenario import Scenario
+from ..engine.scenario import (
+    CascadeSpawn,
+    DecisionGate,
+    Scenario,
+    ScenarioObjective,
+    ScenarioStep,
+    TargetSelector,
+    Trigger,
+)
 from ..plugins.registry import get_plugin
 from ..scenarios.loader import get_scenario, register_scenario, scenarios_for_domain
+from .agent_client import AgentUnavailable, author_scenario_from_nl
 
 
 class AuthoringError(Exception):
@@ -242,23 +253,152 @@ async def _ask_model(domain: str, prompt: str, repair: str | None = None) -> Aut
         raise AuthoringError(f"The model returned a scenario that does not fit the engine's schema: {e}")
 
 
+_RISKS = {"low", "medium", "high", "extreme"}
+_IMPACTS = {"low", "medium", "high", "critical"}
+
+
+def _slug(text: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "_", (text or "").lower()).strip("_")
+    return s[:40] or uuid.uuid4().hex[:8]
+
+
+async def _author_via_agentic(domain: str, prompt: str) -> Scenario:
+    """Fallback authoring path when no Anthropic key is set on the engine.
+
+    Delegates to the AUTOMIND Agentic AI platform (which authors with whatever LLM key
+    IT holds — OpenAI or Anthropic — or its deterministic template stub). AUTOMIND
+    returns a FLAT spec (fault_action, gate_*, cascades, custom_actions); we validate
+    every reference against the live catalog here and assemble the Scenario ourselves,
+    exactly as the Anthropic path does — so the engine stays the source of truth for
+    what is runnable, regardless of which platform wrote the spec.
+    """
+    actions = actions_for_domain(domain)
+    actor_types = actor_types_for_domain(domain)
+    roles = [r.name for r in get_plugin(domain).roles()]
+    existing = scenarios_for_domain(domain)
+
+    try:
+        resp = await author_scenario_from_nl(
+            domain, prompt.strip(),
+            context={
+                "actions": [{"key": a.key, "name": a.name, "category": a.category}
+                            for a in actions],
+                "roles": roles,
+                "actor_types": [{"key": t.key} for t in actor_types],
+                "existing_scenarios": [{"id": s.id, "name": s.name} for s in existing],
+            })
+    except AgentUnavailable as exc:
+        raise AuthoringError(
+            "Scenario authoring needs either an Anthropic API key on this engine "
+            f"(ANTHROPIC_API_KEY) or a reachable Agentic AI service: {exc}")
+
+    spec = resp.result
+    action_keys = {a.key for a in actions}
+    existing_ids = {s.id for s in existing}
+    valid_types = {t.key for t in actor_types}
+
+    # fault action: an existing catalog key, or a declared custom action we register
+    fault_key = (spec.get("fault_action") or "").strip()
+    new_actions: list[ActionSpec] = []
+    if fault_key not in action_keys:
+        declared = next((c for c in spec.get("custom_actions", [])
+                         if c.get("key") == fault_key and fault_key), None)
+        if declared:
+            new_actions.append(ActionSpec(
+                key=fault_key,
+                name=declared.get("name") or fault_key.replace("_", " ").title(),
+                category=declared.get("category") or "fault",
+                domain=domain, requires_target=False))
+        elif actions:
+            fault_key = actions[0].key
+        else:
+            raise AuthoringError(
+                f"'{domain}' has no registered actions and none was declared — "
+                "nothing this domain can run.")
+
+    # target: keep only a validated actor type, and give it a world to inject into
+    target_type = (spec.get("target_type") or "").strip()
+    target = None
+    environment = None
+    if target_type and target_type in valid_types:
+        target = TargetSelector(by="type", value=target_type)
+        environment = EnvironmentSpec(
+            domain=domain,
+            actors=[ActorSpec(id="authored-1", type=target_type,
+                              name=f"{target_type.replace('_', ' ').title()} (authored)")])
+
+    role = spec.get("role") if spec.get("role") in roles else (roles[0] if roles else "response")
+
+    # cascade edges: only to scenarios that actually exist in this domain
+    triggers: list[Trigger] = []
+    for edge in (spec.get("cascades") or [])[:2]:
+        sid = edge.get("scenario_id")
+        if sid not in existing_ids:
+            continue
+        condition = edge.get("condition") or "containment_rate < 1"
+        if condition != "always" and not any(
+                k in condition for k in ("containment_rate", "score", "prevented")):
+            condition = "containment_rate < 1"
+        triggers.append(Trigger(
+            kind="kpi_threshold" if condition != "always" else "scenario_complete",
+            condition=condition,
+            spawns=[CascadeSpawn(scenario_id=sid, delay_min=float(edge.get("delay_min") or 15.0))]))
+
+    risk = spec.get("risk_level") if spec.get("risk_level") in _RISKS else "high"
+    impact = spec.get("impact_level") if spec.get("impact_level") in _IMPACTS else "medium"
+    try:
+        delay_s = max(60, min(900, int(spec.get("delay_s") or 240)))
+    except (TypeError, ValueError):
+        delay_s = 240
+
+    name = (spec.get("name") or f"Authored: {prompt[:48]}").strip()[:90]
+    scenario = Scenario(
+        id=f"{domain}.authored_{_slug(name)}_{uuid.uuid4().hex[:6]}",
+        name=name, domain=domain,
+        description=(spec.get("description") or prompt.strip())[:400],
+        node_kind="fault", category=(spec.get("category") or "operational")[:24],
+        impact_level=impact,
+        phases=["detect", "diagnose", "respond"],
+        steps=[ScenarioStep(id="s1", action=fault_key, phase="detect", at_min=0.0,
+                            is_inject=True, target=target,
+                            label=(spec.get("fault_label") or name)[:160])],
+        decision_gates=[DecisionGate(
+            id="g1", trigger="s1", name=(spec.get("gate_name") or "Operator Response")[:80],
+            correct_action=(spec.get("correct_action") or "Contain the fault.")[:300],
+            risk_level=risk, description=(spec.get("gate_description") or "")[:300],
+            consequence_of_delay=(spec.get("consequence_of_delay") or "")[:300],
+            delay_s=delay_s)],
+        objectives=[ScenarioObjective(
+            text=(spec.get("objective") or "Fault correctly contained")[:200],
+            role=role, condition="containment_rate == 1")],
+        recommended_environment=environment,
+        tags=list({*(spec.get("tags") or []), "authored", "ai"})[:6],
+        triggers=triggers,
+        custom_actions=new_actions,
+    )
+    for action in new_actions:
+        register_action(action)
+    register_scenario(scenario)
+    return scenario
+
+
 async def author_scenario(domain: str, prompt: str) -> Scenario:
     """Author, validate, register. Returns the runnable Scenario.
 
-    One repair round: if the first attempt names an action or actor the engine doesn't
-    have, we hand the model the exact problems and the valid vocabulary and let it fix
-    them. If it still fails, we refuse rather than register something that would inject
-    nothing at run time.
+    Provider selection:
+      * ANTHROPIC_API_KEY set on the engine → author directly with Claude (below),
+        with structured output + a one-round repair loop.
+      * otherwise → delegate to the AUTOMIND Agentic AI platform, which authors with
+        whatever key it holds (OpenAI or Anthropic) or its deterministic stub.
+    Either way the spec is validated against the live catalog before anything registers.
     """
-    if not settings.anthropic_api_key:
-        raise AuthoringError(
-            "Scenario authoring needs an Anthropic API key. Set ANTHROPIC_API_KEY in the "
-            "engine's environment (backend/.env) and restart it."
-        )
     if get_plugin(domain) is None:
         raise AuthoringError(f"Unknown domain '{domain}'.")
     if not (prompt or "").strip():
         raise AuthoringError("Describe the scenario you want in a sentence or two.")
+
+    if not settings.anthropic_api_key:
+        return await _author_via_agentic(domain, prompt)
 
     bundle = await _ask_model(domain, prompt)
     problems = _validate(bundle, domain)
