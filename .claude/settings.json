@@ -30,7 +30,8 @@
       "Read(//c/Users/prana/Downloads/Goalcert_Hub/hub/web/**)",
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"hub up? %{http_code}\\\\n\" http://127.0.0.1:8090/health)",
-      "Bash(curl -s -X POST http://127.0.0.1:8090/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"owner@goalcert.io\",\"password\":\"Simulation2026!\"}')"
+      "Bash(curl -s -X POST http://127.0.0.1:8090/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"owner@goalcert.io\",\"password\":\"Simulation2026!\"}')",
+      "Bash(GOALCERT_DATABASE_URL=sqlite:///C:/Users/prana/AppData/Local/Temp/claude/c--Users-prana-Downloads-simulation-engine-scaffold--3--simulation-engine/a0f030f7-003e-41fc-9e6f-93d75d606582/scratchpad/authoring_test.db ./venv/Scripts/python.exe C:/Users/prana/AppData/Local/Temp/claude/c--Users-prana-Downloads-simulation-engine-scaffold--3--simulation-engine/a0f030f7-003e-41fc-9e6f-93d75d606582/scratchpad/safeguard.py)"
     ],
     "additionalDirectories": [
       "C:\\Users\\prana\\Downloads\\Goalcert_Hub\\services\\simulation-engine",

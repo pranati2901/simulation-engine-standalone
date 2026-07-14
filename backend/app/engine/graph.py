@@ -107,6 +107,26 @@ def _context(result: RunResult) -> dict[str, float]:
     return ctx
 
 
+def _fully_prevented(result: RunResult) -> bool:
+    """True when every fault this scenario tried to inject was blocked by a safeguard.
+
+    Careful with the counters — they do not mean what they look like. In run.py a blocked
+    step `continue`s *before* `attempts += 1`, so a prevented fault is never counted as an
+    attempt. A scenario whose only fault was blocked therefore reports
+    `attempts == 0, prevented == 1` — not `attempts == 1, prevented == 1`.
+
+    So "the cause never happened" is: something was blocked, and nothing got through.
+
+    The `prevented > 0` half is what keeps consequence nodes working: they inject their
+    own (unblockable) action, so they report `attempts == 1, prevented == 0` and must
+    still be free to spawn their own children.
+    """
+    summary = result.summary or {}
+    attempts = int(summary.get("attempts", 0))
+    prevented = int(summary.get("prevented", 0))
+    return prevented > 0 and attempts == 0
+
+
 def _seeded_fraction(*parts: object) -> float:
     """A deterministic [0,1) fraction from arbitrary parts. Used to resolve spawn
     probabilities without RNG, so the graph stays replayable."""
@@ -191,6 +211,27 @@ def run_graph(
         by_scenario[item.scenario.id] = node
 
         if item.depth >= MAX_DEPTH:
+            continue
+
+        # No cause, no consequence.
+        #
+        # A fault can be *blocked outright* by a safeguard — an active resource covering
+        # the target (resolve/resolver.py: spec.prevention). When that happens the fault
+        # never occurs: the run emits "Signal Failure prevented" and nothing else.
+        #
+        # But the triggers below were still being evaluated against that run, and they
+        # fired: `always` spawned the platform overcrowding regardless, and
+        # `containment_rate < 1` held (there was nothing to contain, so the rate is 0),
+        # which spawned the *preventable* service suspension too. So installing the backup
+        # relay blocked the signal failure and the platform still overcrowded, a passenger
+        # still collapsed, and the line still shut down — five consequences of an event
+        # that did not happen.
+        #
+        # That is indefensible on its own terms, and it quietly destroys the engine's
+        # central claim: you cannot tell an operator a consequence was "preventable" while
+        # preventing the cause changes nothing. A scenario whose every fault step was
+        # blocked spawns no children.
+        if _fully_prevented(result):
             continue
 
         context = _context(result)
