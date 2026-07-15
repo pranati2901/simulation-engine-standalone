@@ -49,9 +49,15 @@ class RailwayPlugin(DomainPlugin):
             ("passenger_medical_emergency", "Passenger Medical Emergency"),
             ("service_suspension", "Service Suspension"),
             ("line_wide_delay", "Line-Wide Delay"),
+            ("escalator_congestion", "Concourse & Escalator Congestion"),
         ):
             register_action(ActionSpec(key=key, name=label, category="downstream",
                                        domain=self.key, requires_target=False))
+
+        register_action(ActionSpec(
+            key="psd_failure", name="Platform Screen Door Failure", category="fault", domain=self.key,
+            requires_target=True,
+        ))
 
         for role in self.roles():
             register_role(role)

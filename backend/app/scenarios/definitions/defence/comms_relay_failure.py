@@ -1,6 +1,7 @@
 """Scenario: comms relay failure -> forward post coordination delay."""
 from __future__ import annotations
 
+from ...factory import spawn, when
 from ...loader import register_scenario
 from ....engine.environment import ActorSpec, EnvironmentSpec, ResourceSpec
 from ....engine.scenario import DecisionGate, Scenario, ScenarioObjective, ScenarioStep, TargetSelector
@@ -46,6 +47,15 @@ SCENARIO = Scenario(
         ],
     ),
     tags=["comms", "mission-critical"],
+    # Dynamic Scenario Graph — see scenarios/definitions/defence/cascade.py.
+    # The relay loss fans out: coordination breaks down and situational awareness degrades
+    # (both always), and if the link isn't restored the command net is disrupted too. Those
+    # branches reconverge on a delayed QRF response and, ultimately, mission degradation.
+    triggers=[
+        when("always", spawn("defence.coordination_breakdown_v1", delay_min=15)),
+        when("always", spawn("defence.situational_awareness_loss_v1", delay_min=10)),
+        when("containment_rate < 1", spawn("defence.command_net_disruption_v1", delay_min=20)),
+    ],
 )
 
 register_scenario(SCENARIO)
