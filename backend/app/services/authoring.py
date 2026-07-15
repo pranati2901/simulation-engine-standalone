@@ -88,7 +88,11 @@ HARD RULES
   below. You are authoring ONE scenario; you cannot invent its downstream consequences.
 
 THE CASCADE IS THE POINT
-`triggers` is what makes this a simulation rather than a checklist. Use two kinds:
+`triggers` is what makes this a simulation rather than a checklist. Each trigger is an
+object of the exact shape:
+    {"kind": "state", "condition": "<expr>", "spawns": [{"scenario_id": "<existing id>"}]}
+ALWAYS set "kind" to the literal "state". The firing rule goes in "condition" — NEVER put
+"always" or a comparison in "kind" (that field only accepts the enum in the schema). Use:
 - condition "always"  -> an inherent consequence: it happens whether or not the operator
   performs well.
 - condition "containment_rate < 1"  -> a PREVENTABLE consequence: it only happens because
@@ -125,7 +129,7 @@ EXISTING RESOURCE TYPES (may be named in a new action's `prevention`):
 {line(resources, lambda r: f"{r.key} — {r.name}")}
 
 ROLES (use for objectives[].role and decision-gate ownership):
-{line(roles, lambda r: f"{r.key if hasattr(r, 'key') else r.id} — {getattr(r, 'name', '')}")}
+{line(roles, lambda r: f"{getattr(r, 'role', None) or getattr(r, 'key', None) or '?'} — {getattr(r, 'name', '')}")}
 
 EXISTING SCENARIOS (the ONLY valid triggers[].spawns[].scenario_id values):
 {line(scenarios, lambda s: f"{s.id} — {s.name} ({s.node_kind})")}
@@ -206,40 +210,53 @@ def _validate(bundle: AuthoredBundle, domain: str) -> list[str]:
     return problems
 
 
+async def _call_once(client, domain: str, prompt: str, repair: str | None) -> str:
+    """One model call. Returns the raw JSON text of the AuthoredBundle (schema handed to
+    the model as text — the strict json_schema grammar compiles too large for the full
+    Scenario shape)."""
+    user = f"{_catalog_brief(domain)}\n\nOPERATOR'S DESCRIPTION:\n{prompt}"
+    if repair:
+        user += (
+            "\n\nYOUR PREVIOUS ATTEMPT WAS NOT ACCEPTED. Fix exactly these problems and "
+            "return the whole bundle again:\n" + repair
+        )
+    user += (
+        "\n\nReturn ONLY a single JSON object that validates against this JSON Schema — "
+        "no prose, no markdown fences:\n" + json.dumps(AuthoredBundle.model_json_schema())
+    )
+    resp = await client.messages.create(
+        model=settings.authoring_model,
+        max_tokens=16000,
+        system=SYSTEM,
+        messages=[{"role": "user", "content": user}],
+    )
+    if resp.stop_reason == "refusal":
+        raise AuthoringError("The authoring model declined this request.")
+    text = next((b.text for b in resp.content if b.type == "text"), "")
+    # The model may wrap the JSON in prose or ```json fences — pull out the object.
+    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.S)
+    return fenced.group(1) if fenced else text[text.find("{"): text.rfind("}") + 1]
+
+
 async def _ask_model(domain: str, prompt: str, repair: str | None = None) -> AuthoredBundle:
-    """One call to Claude. Structured output means we get valid JSON or an SDK error —
-    never a half-parsed blob."""
+    """One authored bundle, with one automatic schema-repair round: if the model's JSON
+    doesn't fit the engine's schema (wrong enum like a trigger `kind`, a missing field, …),
+    we hand the exact validation error back and let it fix the whole object once."""
     from anthropic import AsyncAnthropic   # imported lazily so the engine runs without it
 
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    user = f"{_catalog_brief(domain)}\n\nOPERATOR'S DESCRIPTION:\n{prompt}"
-    if repair:
-        user += (
-            "\n\nYOUR PREVIOUS ATTEMPT WAS NOT RUNNABLE. Fix exactly these problems and "
-            "return the whole bundle again:\n" + repair
-        )
-
-    resp = await client.messages.create(
-        model=settings.authoring_model,
-        max_tokens=16000,
-        thinking={"type": "adaptive"},
-        output_config={
-            "effort": "high",
-            "format": {"type": "json_schema", "schema": AuthoredBundle.model_json_schema()},
-        },
-        system=SYSTEM,
-        messages=[{"role": "user", "content": user}],
-    )
-
-    if resp.stop_reason == "refusal":
-        raise AuthoringError("The authoring model declined this request.")
-
-    text = next((b.text for b in resp.content if b.type == "text"), "")
+    payload = await _call_once(client, domain, prompt, repair)
     try:
-        return AuthoredBundle.model_validate(json.loads(text))
+        return AuthoredBundle.model_validate(json.loads(payload))
     except (json.JSONDecodeError, ValidationError) as e:
-        raise AuthoringError(f"The model returned a scenario that does not fit the engine's schema: {e}")
+        fix = ("Your JSON did not fit the engine schema. Fix EXACTLY this and return the "
+               f"whole object again:\n{e}")
+        payload = await _call_once(client, domain, prompt, f"{repair}\n{fix}" if repair else fix)
+        try:
+            return AuthoredBundle.model_validate(json.loads(payload))
+        except (json.JSONDecodeError, ValidationError) as e2:
+            raise AuthoringError(f"The model returned a scenario that does not fit the engine's schema: {e2}")
 
 
 async def author_scenario(domain: str, prompt: str) -> Scenario:
