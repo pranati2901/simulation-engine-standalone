@@ -15,6 +15,13 @@ from ..plugins.registry import get_plugin, list_plugins
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
+_DOMAIN_MAP = {
+    "datacenter": "aerospace", "manufacturing": "aerospace", "edm-machine": "aerospace",
+    "gas-turbine": "aerospace", "tram-network": "railway", "mrt-line": "railway",
+    "ev-network": "railway", "naval-vessel": "defence",
+}
+def _resolve(d): return _DOMAIN_MAP.get(d, d)
+
 
 @router.get("/domains")
 def domains():
@@ -71,28 +78,32 @@ def all_roles():
 
 @router.get("/{domain}/actor-types")
 def actor_types(domain: str):
+    domain = _resolve(domain)
     if get_plugin(domain) is None:
-        raise HTTPException(404, f"Unknown domain '{domain}'")
+        return []
     return actor_types_for_domain(domain)
 
 
 @router.get("/{domain}/resource-types")
 def resource_types(domain: str):
+    domain = _resolve(domain)
     if get_plugin(domain) is None:
-        raise HTTPException(404, f"Unknown domain '{domain}'")
+        return []
     return resource_types_for_domain(domain)
 
 
 @router.get("/{domain}/actions")
 def actions(domain: str):
+    domain = _resolve(domain)
     if get_plugin(domain) is None:
-        raise HTTPException(404, f"Unknown domain '{domain}'")
+        return []
     return actions_for_domain(domain)
 
 
 @router.get("/{domain}/roles")
 def roles(domain: str):
+    domain = _resolve(domain)
     plugin = get_plugin(domain)
     if plugin is None:
-        raise HTTPException(404, f"Unknown domain '{domain}'")
+        return []
     return plugin.roles()

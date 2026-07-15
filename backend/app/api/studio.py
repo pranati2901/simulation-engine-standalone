@@ -31,6 +31,21 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/studio", tags=["studio"])
 
+# Map Hub twin domains to simulation engine domains
+_DOMAIN_MAP = {
+    "datacenter": "aerospace",
+    "manufacturing": "aerospace",
+    "edm-machine": "aerospace",
+    "gas-turbine": "aerospace",
+    "tram-network": "railway",
+    "mrt-line": "railway",
+    "ev-network": "railway",
+    "naval-vessel": "defence",
+}
+
+def _resolve_domain(domain: str) -> str:
+    return _DOMAIN_MAP.get(domain, domain)
+
 
 @router.get("/domains")
 def list_domains():
@@ -49,9 +64,10 @@ def list_domains():
 @router.get("/faults")
 def list_faults(domain: str = Query(..., description="Domain key")):
     """List fault/action types available for a domain."""
+    domain = _resolve_domain(domain)
     plugin = get_plugin(domain)
     if plugin is None:
-        raise HTTPException(404, f"Unknown domain '{domain}'")
+        return []  # graceful fallback instead of 404
     actions = actions_for_domain(domain)
     return [
         {
@@ -174,13 +190,15 @@ def _generate_scenario_fallback(description: str, domain: str) -> dict:
 @router.post("/scenarios/author")
 async def author_scenario(req: AuthorRequest):
     """Generate a scenario spec from natural language using AI."""
-    plugin = get_plugin(req.domain)
+    domain = _resolve_domain(req.domain)
+    plugin = get_plugin(domain)
     if plugin is None:
-        raise HTTPException(404, f"Unknown domain '{req.domain}'")
+        plugin = get_plugin("aerospace")
+        domain = "aerospace"
 
-    spec = _generate_scenario_with_anthropic(req.description, req.domain)
+    spec = _generate_scenario_with_anthropic(req.description, domain)
 
-    scenario_id = f"{req.domain}.studio_{uuid.uuid4().hex[:8]}"
+    scenario_id = f"{domain}.studio_{uuid.uuid4().hex[:8]}"
     scenario = Scenario(
         id=scenario_id,
         name=spec.get("name", f"Studio Scenario - {req.description[:40]}"),
