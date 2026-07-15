@@ -41,6 +41,22 @@ class DefencePlugin(DomainPlugin):
             requires_target=True,
         ))
 
+        # Cascade consequence actions (see scenarios/definitions/defence/cascade.py):
+        for key, label in (
+            ("coordination_breakdown", "Forward-Post Coordination Breakdown"),
+            ("situational_awareness_loss", "Situational Awareness Loss"),
+            ("command_net_disruption", "Command Net Disruption"),
+            ("delayed_qrf_response", "Delayed QRF Response"),
+            ("fires_deconfliction_risk", "Fires Deconfliction Risk"),
+            ("mission_degradation", "Mission Degradation"),
+        ):
+            register_action(ActionSpec(key=key, name=label, category="downstream", domain=self.key))
+
+        register_action(ActionSpec(
+            key="radar_degradation", name="Radar Picture Degradation", category="fault", domain=self.key,
+            requires_target=True,
+        ))
+
         for role in self.roles():
             register_role(role)
 

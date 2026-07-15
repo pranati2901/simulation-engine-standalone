@@ -53,10 +53,10 @@ SCENARIO = Scenario(
     ),
     tags=["hydraulic", "maintenance", "delay-cascade"],
     # Dynamic Scenario Graph — see scenarios/definitions/aerospace/cascade.py.
-    # An uncontained leak spawns the severe pump-failure branch; any leak delays the flight.
+    # Any leak delays the flight, which cascades through gate congestion into a
+    # maintenance backlog / crew overtime and ultimately financial impact.
     triggers=[
         when("always", spawn("aerospace.flight_delay_cascade_v1", delay_min=25)),
-        when("containment_rate < 1", spawn("aerospace.pump_failure_v1", delay_min=20)),
     ],
 )
 

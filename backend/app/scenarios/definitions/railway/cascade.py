@@ -1,9 +1,10 @@
 """Railway cascade graph — downstream of an unrestored signal block failure.
 
     signal_failure
-      ├─(always)──────────► platform_overcrowding ─► passenger_medical ─┐
-      └─(NOT contained)──► service_suspension ◄───────────────────────── (converge)
-                                    └─► line_wide_delay
+      ├─(always)──────────► platform_overcrowding ─┬► passenger_medical ─► service_suspension ─┐
+      │                                            └► escalator_congestion ─► line_wide_delay   │
+      └─(NOT contained)──► service_suspension ◄──────────────────────────── (converge)          │
+                                    └─► line_wide_delay ◄────────────────────────────────────────┘ (converge)
 """
 from __future__ import annotations
 
@@ -16,7 +17,18 @@ register_scenario(consequence_node(
     target_name="Platform 2", category="operational", impact="medium",
     description="Held trains stack passengers on the platform as the signal stays down.",
     tags=["operational"],
-    triggers=[when("always", spawn("railway.passenger_medical_v1", delay_min=15))],
+    triggers=[
+        when("always", spawn("railway.passenger_medical_v1", delay_min=15)),
+        when("always", spawn("railway.escalator_congestion_v1", delay_min=8)),
+    ],
+))
+
+register_scenario(consequence_node(
+    id="railway.escalator_congestion_v1", name="Concourse & Escalator Congestion", domain="railway",
+    action="escalator_congestion", category="operational", impact="medium",
+    description="Overcrowding backs up onto the concourse and escalators, forcing crowd-control holds.",
+    tags=["operational", "crowd"],
+    triggers=[when("always", spawn("railway.line_wide_delay_v1", delay_min=18))],
 ))
 
 register_scenario(consequence_node(

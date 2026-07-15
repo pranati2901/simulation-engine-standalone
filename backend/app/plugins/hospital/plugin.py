@@ -42,6 +42,23 @@ class HospitalPlugin(DomainPlugin):
             requires_target=True,
         ))
 
+        # Cascade consequence actions (see scenarios/definitions/hospital/cascade.py):
+        for key, label in (
+            ("or_pressure_loss", "Theatre Positive-Pressure Loss"),
+            ("cold_chain_excursion", "Cold-Chain Temperature Excursion"),
+            ("surgery_cancellation", "Elective Surgery Cancellation"),
+            ("infection_risk", "Elevated Infection Risk"),
+            ("medication_spoilage", "Medication & Blood Spoilage"),
+            ("patient_backlog", "Hospital-Wide Patient Backlog"),
+        ):
+            register_action(ActionSpec(key=key, name=label, category="downstream",
+                                       domain=self.key, requires_target=False))
+
+        register_action(ActionSpec(
+            key="medical_gas_drop", name="Medical Gas Pressure Drop", category="fault", domain=self.key,
+            requires_target=True,
+        ))
+
         for role in self.roles():
             register_role(role)
 

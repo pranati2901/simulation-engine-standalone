@@ -32,7 +32,7 @@ class RunResult(BaseModel):
     duration_s: int
     focus_role: str = "response"
     events: list[SimEvent] = Field(default_factory=list)
-    scores: dict[str, int] = Field(default_factory=dict)             # {role: score}
+    scores: dict[str, float] = Field(default_factory=dict)           # {role: score} (0–100, may be fractional)
     kpis: dict[str, float] = Field(default_factory=dict)
     summary: dict[str, Any] = Field(default_factory=dict)
     objectives: dict[str, list[ObjectiveStatus]] = Field(default_factory=dict)

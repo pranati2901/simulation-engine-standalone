@@ -85,6 +85,11 @@ class AerospacePlugin(DomainPlugin):
             register_action(ActionSpec(key=key, name=label, category="downstream",
                                        domain=self.key, requires_target=False))
 
+        register_action(ActionSpec(
+            key="avionics_fault", name="Avionics Fault", category="fault", domain=self.key,
+            requires_target=True,
+        ))
+
         for role in self.roles():
             register_role(role)
 

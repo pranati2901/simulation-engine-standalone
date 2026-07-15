@@ -1,6 +1,7 @@
 """Scenario: ward HVAC failure -> operating room delay."""
 from __future__ import annotations
 
+from ...factory import spawn, when
 from ...loader import register_scenario
 from ....engine.environment import ActorSpec, EnvironmentSpec, ResourceSpec
 from ....engine.scenario import DecisionGate, Scenario, ScenarioObjective, ScenarioStep, TargetSelector
@@ -46,6 +47,15 @@ SCENARIO = Scenario(
         ],
     ),
     tags=["hvac", "patient-safety"],
+    # Dynamic Scenario Graph — see scenarios/definitions/hospital/cascade.py.
+    # The HVAC drift branches: the operating theatre loses positive pressure and the cold
+    # chain drifts (both always); if it isn't contained, surgery is cancelled outright. The
+    # branches reconverge on infection risk and a hospital-wide patient backlog.
+    triggers=[
+        when("always", spawn("hospital.or_pressure_loss_v1", delay_min=20)),
+        when("always", spawn("hospital.cold_chain_excursion_v1", delay_min=15)),
+        when("containment_rate < 1", spawn("hospital.surgery_cancellation_v1", delay_min=25)),
+    ],
 )
 
 register_scenario(SCENARIO)
