@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 
 export default function Library() {
-  const { allScenarios, domains, favorites, toggleFav, openScenario } = useStore()
+  const { allScenarios, domains, favorites, toggleFav, openInBuilder } = useStore()
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
@@ -43,7 +43,7 @@ export default function Library() {
             </div>
             <b style={{ fontSize: 13.5, margin: '8px 0 4px' }}>{s.name}</b>
             <span style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5, flex: 1 }}>{s.description}</span>
-            <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={() => openScenario(s.domainKey, s.id)}>Open</button>
+            <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={() => openInBuilder(s.domainKey, s.id)}>Open in Builder →</button>
           </div>
         ))}
         {!shown.length && <div className="hint" style={{ padding: 20 }}>No scenarios match.</div>}

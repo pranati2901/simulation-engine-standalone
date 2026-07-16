@@ -42,6 +42,7 @@ class MonteCarloResult(BaseModel):
     certified_rate: float                       # fraction of runs that were certified
     score_stats: dict[str, RangeStats] = {}      # per role
     kpi_stats: dict[str, RangeStats] = {}        # per kpi
+    samples: dict[str, list[float]] = {}         # raw per-iteration values (scores + kpis) for client-side histograms
 
 
 def _percentile(values: list[float], pct: float) -> float:
@@ -98,4 +99,8 @@ def run_monte_carlo(
         certified_rate=round(certified_count / iterations, 4) if iterations else 0.0,
         score_stats={role: _stats(vals) for role, vals in score_samples.items()},
         kpi_stats={kpi: _stats(vals) for kpi, vals in kpi_samples.items()},
+        samples={
+            **{role: [round(v, 3) for v in vals] for role, vals in score_samples.items()},
+            **{kpi: [round(v, 4) for v in vals] for kpi, vals in kpi_samples.items()},
+        },
     )

@@ -9,14 +9,16 @@ import TrainingMode from './modes/TrainingMode.jsx'
 import TwinMode from './modes/TwinMode.jsx'
 import Reports from './modes/Reports.jsx'
 import WarRoom from './modes/WarRoom.jsx'
-import Composer from './modes/Composer.jsx'
+import Builder from './modes/Builder.jsx'
+import Simulation from './modes/Simulation.jsx'
 import Assumptions from './modes/Assumptions.jsx'
 
 const NAV = [
   { to: '/dashboard', id: 'dashboard', label: 'Dashboard', icon: 'dashboard', color: '#64748b', title: 'Dashboard', sub: 'Your operation at a glance' },
   { to: '/warroom', id: 'warroom', label: 'War Room', icon: 'warroom', color: '#ef4444', title: 'Portfolio War Room', sub: 'Total $ at risk across every vertical' },
   { to: '/library', id: 'library', label: 'Library', icon: 'library', color: '#8b5cf6', title: 'Scenario Library', sub: 'Browse and open tested scenarios' },
-  { to: '/compose', id: 'compose', label: 'Compose', icon: 'compose', color: '#a855f7', title: 'Scenario Composer', sub: 'Collide two faults into one picture' },
+  { to: '/builder', id: 'builder', label: 'Builder', icon: 'builder', color: '#a855f7', title: 'Scenario Builder', sub: 'Tune the failure web, node by node' },
+  { to: '/simulation', id: 'simulation', label: 'Simulation', icon: 'simulation', color: '#ec4899', title: 'Simulation', sub: 'Run the scenario and read the exposure' },
   { to: '/decision', id: 'decision', label: 'Decision', icon: 'decision', color: '#3b82f6', title: 'Decision Intelligence', sub: 'Model levers, compare fixes, decide' },
   { to: '/training', id: 'training', label: 'Training', icon: 'training', color: '#22c55e', title: 'Scenario Training', sub: 'Author and score drills' },
   { to: '/twin', id: 'twin', label: 'Twin', icon: 'twin', color: '#f59e0b', title: 'Twin Intelligence', sub: 'Find the weak point before it fails' },
@@ -65,7 +67,8 @@ export default function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/warroom" element={<WarRoom />} />
                 <Route path="/library" element={<Library />} />
-                <Route path="/compose" element={<Composer />} />
+                <Route path="/builder" element={<Builder />} />
+                <Route path="/simulation" element={<Simulation />} />
                 <Route path="/decision" element={<DecisionMode />} />
                 <Route path="/training" element={<TrainingMode />} />
                 <Route path="/twin" element={<TwinMode />} />

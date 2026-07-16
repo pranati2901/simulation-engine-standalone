@@ -3,7 +3,7 @@ import { useStore } from '../store.jsx'
 import { api } from '../api.js'
 import { computeImpact, money } from '../impact.js'
 
-const COLORS = { aerospace: '#2563eb', defence: '#6d28d9', hospital: '#0891b2', railway: '#059669' }
+const COLORS = { aerospace: '#2563eb', defence: '#6d28d9', hospital: '#0891b2', railway: '#059669', ev: '#0ea5e9' }
 
 // Portfolio War Room — total $ at risk across every vertical at once. What gets a COO to sign.
 export default function WarRoom() {

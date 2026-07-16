@@ -47,7 +47,8 @@ def load_all() -> None:
     from .railway.plugin import RailwayPlugin
     from .hospital.plugin import HospitalPlugin
     from .defence.plugin import DefencePlugin
+    from .ev.plugin import EVPlugin
 
-    for plugin_cls in (AerospacePlugin, RailwayPlugin, HospitalPlugin, DefencePlugin):
+    for plugin_cls in (AerospacePlugin, RailwayPlugin, HospitalPlugin, DefencePlugin, EVPlugin):
         register(plugin_cls())
     _loaded = True

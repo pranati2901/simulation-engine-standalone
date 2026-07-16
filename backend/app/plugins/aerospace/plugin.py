@@ -16,7 +16,7 @@ from ..base import DomainPlugin
 
 class AerospacePlugin(DomainPlugin):
     key = "aerospace"
-    name = "Aerospace (Collins Aerospace POC)"
+    name = "Aerospace"
 
     def register(self) -> None:
         register_actor_type(ActorType(
