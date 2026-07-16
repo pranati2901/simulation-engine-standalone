@@ -56,6 +56,7 @@ const MODEL = {
   hospital: { money: 1.5e5, units: (W) => [{ label: 'surgeries cancelled', value: Math.max(1, Math.round(W * 1.4)) }, { label: 'patients affected', value: Math.round(W * 130) }] },
   aerospace: { money: 4.0e5, units: (W) => [{ label: 'flights delayed', value: Math.max(1, Math.round(W * 2.2)) }, { label: 'hours AOG', value: Math.round(W * 3.5) }] },
   defence: { money: 1.8e5, units: (W) => [{ label: 'min response delay', value: Math.round(W * 22) }, { label: 'readiness', value: Math.round(W * 6), suffix: '%', neg: true }] },
+  ev: { money: 2.5e5, units: (W) => [{ label: 'charging sessions lost', value: Math.round(W * 180) }, { label: 'MWh curtailed', value: Math.round(W * 2.4) }] },
 }
 const DEFAULT_MODEL = { money: 2.0e5, units: (W) => [{ label: 'impact units', value: Math.round(W * 100) }] }
 

@@ -21,6 +21,8 @@ export function StoreProvider({ children }) {
 
   const [allScenarios, setAllScenarios] = useState([])   // every fault across every domain
   const [favorites, setFavorites] = useState(loadFavs)
+  const [simSel, setSimSel] = useState(null)             // Builder → Simulation hand-off
+  const [builderPick, setBuilderPick] = useState(null)   // Library → Builder hand-off
 
   const [graph, setGraph] = useState(null)
   const [running, setRunning] = useState(false)
@@ -83,6 +85,11 @@ export function StoreProvider({ children }) {
     else { pendingRef.current = id; setDomain(dk) }
   }, [domain, navigate])
 
+  // open a scenario straight into the Builder (used by the Library)
+  const openInBuilder = useCallback((dk, id) => {
+    setBuilderPick({ domainKey: dk, id }); navigate('/builder')
+  }, [navigate])
+
   const toggleFav = useCallback((id) => {
     setFavorites(prev => {
       const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id)
@@ -95,12 +102,13 @@ export function StoreProvider({ children }) {
     domains, domain, setDomain,
     scenarios, scenarioId, setScenarioId, reloadScenarios: () => loadScenarios(domain),
     allScenarios, favorites, toggleFav, openScenario,
+    simSel, setSimSel, builderPick, setBuilderPick, openInBuilder,
     readiness, setReadiness,
     graph, running, error, run,
     mc, mcRunning, runMonteCarlo,
     selected: scenarios.find(s => s.id === scenarioId) || null,
-  }), [engineUp, domains, domain, scenarios, scenarioId, allScenarios, favorites, toggleFav,
-    openScenario, readiness, graph, running, error, run, mc, mcRunning, runMonteCarlo, loadScenarios])
+  }), [engineUp, domains, domain, scenarios, scenarioId, allScenarios, favorites, simSel, builderPick, toggleFav,
+    openScenario, openInBuilder, readiness, graph, running, error, run, mc, mcRunning, runMonteCarlo, loadScenarios])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -2,7 +2,7 @@
 // (it models physics/ops, not money). User-editable and saved to the browser, so nothing
 // financial is baked into the code.
 export const DEF = {
-  money: { railway: 300000, hospital: 150000, aerospace: 400000, defence: 180000, default: 200000 },
+  money: { railway: 300000, hospital: 150000, aerospace: 400000, defence: 180000, ev: 250000, default: 200000 },
   cost: { cross: 60000, std: 130000, full: 240000 },
 }
 

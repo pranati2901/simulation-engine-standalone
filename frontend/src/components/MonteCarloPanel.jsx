@@ -1,9 +1,30 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useStore } from '../store.jsx'
-import { pct } from '../impact.js'
+import { api } from '../api.js'
+import { pct, money, exposureAt } from '../impact.js'
+import { Histogram } from './charts.jsx'
 
-export default function MonteCarloPanel() {
-  const { mc, mcRunning, runMonteCarlo } = useStore()
+function binExposure(samples, full, prev, n = 12) {
+  const xs = samples.map(c => exposureAt(full, prev, c))
+  const mn = Math.min(...xs), mx = Math.max(...xs), span = (mx - mn) || 1
+  const bins = Array.from({ length: n }, (_, i) => ({ lo: mn + span * i / n, hi: mn + span * (i + 1) / n, count: 0 }))
+  xs.forEach(x => { bins[Math.min(n - 1, Math.floor((x - mn) / span * n))].count++ })
+  return bins
+}
+
+// Runs against the store's selected scenario by default; pass scenarioId/domain to run it
+// against a specific scenario. Pass full/prev to also render the $-outcome distribution.
+export default function MonteCarloPanel({ scenarioId, domain, full, prev }) {
+  const store = useStore()
+  const local = scenarioId != null
+  const [lmc, setLmc] = useState(null)
+  const [lrun, setLrun] = useState(false)
+  useEffect(() => { setLmc(null) }, [scenarioId])
+  const mc = local ? lmc : store.mc
+  const mcRunning = local ? lrun : store.mcRunning
+  const runMonteCarlo = local
+    ? async () => { setLrun(true); try { setLmc(await api.monteCarlo(scenarioId, domain)) } finally { setLrun(false) } }
+    : store.runMonteCarlo
   const score = mc?.score_stats?.operator
   return (
     <div className="card">
@@ -54,6 +75,20 @@ export default function MonteCarloPanel() {
               </div>
             </div>
           )}
+          {full != null && mc.samples?.containment_rate?.length > 1 && (() => {
+            const bins = binExposure(mc.samples.containment_rate, full, prev || 0)
+            const modeIdx = bins.indexOf(bins.reduce((a, b) => b.count > a.count ? b : a, bins[0]))
+            return (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+                  <b>Distribution of financial outcomes</b>
+                  <span style={{ color: 'var(--muted)' }}>{mc.iterations} runs</span>
+                </div>
+                <Histogram bins={bins} markerIdx={modeIdx} labelFn={(b) => money(b.lo)} />
+                <div className="hint" style={{ marginTop: 4 }}>Most-likely outcome around <b>{money(bins[modeIdx].lo)}</b>; the spread is your real financial risk band, not a single point estimate.</div>
+              </div>
+            )
+          })()}
           <button className="btn btn-block" style={{ marginTop: 14 }} onClick={runMonteCarlo} disabled={mcRunning}>
             {mcRunning ? <><span className="spin spin-dark" /> Re-running…</> : 'Run again'}
           </button>
