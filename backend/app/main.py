@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import catalog, dashboard, guided, jilla, runs, scenarios, studio, tripwire
+from .api import analyst, catalog, dashboard, guided, jilla, runs, scenarios, studio, tripwire
 from .core.auth import verify_api_key
 from .core.settings import settings
 from .db.base import Base, engine
@@ -48,6 +48,7 @@ app.include_router(guided.router, dependencies=[Depends(verify_api_key)])
 app.include_router(tripwire.router, dependencies=[Depends(verify_api_key)])
 app.include_router(studio.router, dependencies=[Depends(verify_api_key)])
 app.include_router(jilla.router, dependencies=[Depends(verify_api_key)])
+app.include_router(analyst.router, dependencies=[Depends(verify_api_key)])
 app.include_router(ws_runs.router)
 
 
