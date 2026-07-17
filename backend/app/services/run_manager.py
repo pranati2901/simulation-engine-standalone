@@ -37,6 +37,20 @@ from . import runner
 # check ownership. Keying by (org, id) would look equivalent and isn't: get_graph would
 # then need the org to build the key, and any caller that forgot would silently miss
 # instead of being refused.
+#
+# ⚠ HORIZONTAL SCALING (read before raising the ECS task count above 1):
+# This dict is PER PROCESS. A graph created on task A is invisible to task B, so
+# GET /runs/graph/{root_run_id} would 404 for whichever task the load balancer happened to
+# pick — intermittently, and only under load, which is the worst way to find out.
+#
+# It is safe TODAY only because nothing reads it back: POST /runs/graph returns the whole
+# graph in its own response, and no frontend calls the GET. So the engine scales out fine
+# as long as that stays true.
+#
+# The moment anything wants to re-open a past run graph, this needs to be persisted (its
+# own table, or a JSON blob per graph — see the module docstring for why RunORM's shape
+# doesn't fit) or the service pinned to one task. Do not assume "it works in staging with
+# one task" generalises.
 _GRAPHS: dict[str, tuple[str | None, RunGraph]] = {}
 
 
