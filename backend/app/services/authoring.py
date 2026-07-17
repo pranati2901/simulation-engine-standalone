@@ -55,7 +55,7 @@ from ..engine.scenario import (
     Trigger,
 )
 from ..plugins.registry import get_plugin
-from ..scenarios.loader import get_scenario, register_scenario, scenarios_for_domain
+from ..scenarios.loader import register_scenario, scenario_id_exists, scenarios_for_domain
 from .agent_client import AgentUnavailable, author_scenario_from_nl
 
 
@@ -117,11 +117,11 @@ Set `decision_gates[].risk_level` honestly (low|medium|high|extreme): it sets th
 readiness threshold needed to pass the gate. High-risk faults should be hard to contain."""
 
 
-def _catalog_brief(domain: str) -> str:
+def _catalog_brief(domain: str, org: str | None = None) -> str:
     actions = actions_for_domain(domain)
     actors = actor_types_for_domain(domain)
     resources = resource_types_for_domain(domain)
-    scenarios = scenarios_for_domain(domain)
+    scenarios = scenarios_for_domain(domain, org)
     roles = get_plugin(domain).roles() if get_plugin(domain) else []
 
     def line(items, fmt):
@@ -147,21 +147,24 @@ EXISTING SCENARIOS (the ONLY valid triggers[].spawns[].scenario_id values):
 """
 
 
-def _validate(bundle: AuthoredBundle, domain: str) -> list[str]:
+def _validate(bundle: AuthoredBundle, domain: str, org: str | None = None) -> list[str]:
     """Return a list of human-readable problems. Empty list = runnable."""
     problems: list[str] = []
     scn = bundle.scenario
 
     if scn.domain != domain:
         problems.append(f"scenario.domain is '{scn.domain}', must be '{domain}'.")
-    if get_scenario(scn.id) is not None:
+    # Unscoped on purpose: `id` is the global primary key, so a colliding id fails to
+    # INSERT even if the other tenant's row is invisible to this one. Checking with the
+    # org-scoped get_scenario() here would pass validation and then blow up on the write.
+    if scenario_id_exists(scn.id):
         problems.append(f"scenario id '{scn.id}' already exists — choose a different id.")
     if not re.fullmatch(r"[a-z0-9_]+\.[a-z0-9_]+", scn.id or ""):
         problems.append(f"scenario id '{scn.id}' must look like '{domain}.some_name_v1'.")
 
     known_actions = {a.key for a in actions_for_domain(domain)} | {a.key for a in bundle.new_actions}
     known_actors = {a.key for a in actor_types_for_domain(domain)}
-    known_scenarios = {s.id for s in scenarios_for_domain(domain)}
+    known_scenarios = {s.id for s in scenarios_for_domain(domain, org)}
 
     if not scn.steps:
         problems.append("scenario has no steps — it would inject nothing.")
@@ -221,7 +224,7 @@ def _validate(bundle: AuthoredBundle, domain: str) -> list[str]:
     return problems
 
 
-async def _call_once(client, domain: str, prompt: str, repair: str | None) -> str:
+async def _call_once(client, domain: str, prompt: str, repair: str | None, org: str | None = None) -> str:
     """One model call. Returns the raw JSON text of the AuthoredBundle (schema handed to
     the model as text — the strict json_schema grammar compiles too large for the full
     Scenario shape)."""
@@ -249,15 +252,24 @@ async def _call_once(client, domain: str, prompt: str, repair: str | None) -> st
     return fenced.group(1) if fenced else text[text.find("{"): text.rfind("}") + 1]
 
 
-async def _ask_model(domain: str, prompt: str, repair: str | None = None) -> AuthoredBundle:
+async def _ask_model(domain: str, prompt: str, repair: str | None = None, org: str | None = None) -> AuthoredBundle:
     """One authored bundle, with one automatic schema-repair round: if the model's JSON
     doesn't fit the engine's schema (wrong enum like a trigger `kind`, a missing field, …),
     we hand the exact validation error back and let it fix the whole object once."""
-    from anthropic import AsyncAnthropic   # imported lazily so the engine runs without it
+    # Lazy so the engine runs without the SDK — but guarded, because an unguarded
+    # ModuleNotFoundError escapes as a bare 500 with an empty body instead of the 422 the
+    # caller can act on. See the same guard in revision.py::_ask_revision.
+    try:
+        from anthropic import AsyncAnthropic
+    except ModuleNotFoundError as exc:
+        raise AuthoringError(
+            "The Anthropic SDK is not installed on this engine — run "
+            "`pip install -r requirements.txt` in backend/ and restart. "
+            f"({exc})")
 
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    payload = await _call_once(client, domain, prompt, repair)
+    payload = await _call_once(client, domain, prompt, repair, org)
     try:
         return AuthoredBundle.model_validate(json.loads(payload))
     except (json.JSONDecodeError, ValidationError) as e:
@@ -279,7 +291,7 @@ def _slug(text: str) -> str:
     return s[:40] or uuid.uuid4().hex[:8]
 
 
-async def _author_via_agentic(domain: str, prompt: str) -> Scenario:
+async def _author_via_agentic(domain: str, prompt: str, org: str | None = None) -> Scenario:
     """Fallback authoring path when no Anthropic key is set on the engine.
 
     Delegates to the AUTOMIND Agentic AI platform (which authors with whatever LLM key
@@ -292,7 +304,7 @@ async def _author_via_agentic(domain: str, prompt: str) -> Scenario:
     actions = actions_for_domain(domain)
     actor_types = actor_types_for_domain(domain)
     roles = [r.name for r in get_plugin(domain).roles()]
-    existing = scenarios_for_domain(domain)
+    existing = scenarios_for_domain(domain, org)
 
     try:
         resp = await author_scenario_from_nl(
@@ -395,11 +407,11 @@ async def _author_via_agentic(domain: str, prompt: str) -> Scenario:
     )
     for action in new_actions:
         register_action(action)
-    register_scenario(scenario)
+    register_scenario(scenario, org)
     return scenario
 
 
-async def author_scenario(domain: str, prompt: str) -> Scenario:
+async def author_scenario(domain: str, prompt: str, org: str | None = None) -> Scenario:
     """Author, validate, register. Returns the runnable Scenario.
 
     Provider selection:
@@ -415,14 +427,14 @@ async def author_scenario(domain: str, prompt: str) -> Scenario:
         raise AuthoringError("Describe the scenario you want in a sentence or two.")
 
     if not settings.anthropic_api_key:
-        return await _author_via_agentic(domain, prompt)
+        return await _author_via_agentic(domain, prompt, org)
 
-    bundle = await _ask_model(domain, prompt)
-    problems = _validate(bundle, domain)
+    bundle = await _ask_model(domain, prompt, org=org)
+    problems = _validate(bundle, domain, org)
 
     if problems:
-        bundle = await _ask_model(domain, prompt, repair="\n".join(f"- {p}" for p in problems))
-        problems = _validate(bundle, domain)
+        bundle = await _ask_model(domain, prompt, repair="\n".join(f"- {p}" for p in problems), org=org)
+        problems = _validate(bundle, domain, org)
 
     if problems:
         raise AuthoringError(
@@ -441,6 +453,6 @@ async def author_scenario(domain: str, prompt: str) -> Scenario:
     scenario = bundle.scenario.model_copy(update={"custom_actions": bundle.new_actions})
     for action in bundle.new_actions:
         register_action(action)
-    register_scenario(scenario)
+    register_scenario(scenario, org)
 
     return scenario

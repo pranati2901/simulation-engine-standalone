@@ -1,17 +1,28 @@
 // store.jsx — one shared state for the whole platform: navigation, the selected domain/
 // scenario, the last run, favourites, and the cross-domain scenario library.
+//
+// `twinDomain` / `twinName` are supplied by the HUB when this app runs as a federated
+// remote: scenarios are domain-scoped and in the hub the domain comes from whichever twin
+// is open (integration plan §0.9). Standalone they are undefined and the pages fall back
+// to their own pickers, so every vertical stays reachable without a twin.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from './api.js'
+import { simDomainForTwin } from './domains.js'
 
 const Ctx = createContext(null)
 export const useStore = () => useContext(Ctx)
 
 const loadFavs = () => { try { return new Set(JSON.parse(localStorage.getItem('simcore_favs') || '[]')) } catch { return new Set() } }
 
-export function StoreProvider({ children }) {
+export function StoreProvider({ children, twinDomain, twinName }) {
   const navigate = useNavigate()
   const [engineUp, setEngineUp] = useState(null)
+
+  // The engine domain the hub's active twin maps to, or null if that twin has no engine
+  // scenarios. Null rather than a default is deliberate — showing another domain's cascade
+  // for this twin would look plausible and be completely wrong.
+  const activeDomain = useMemo(() => simDomainForTwin(twinDomain), [twinDomain])
 
   const [domains, setDomains] = useState([])
   const [domain, setDomain] = useState('')
@@ -39,13 +50,19 @@ export function StoreProvider({ children }) {
   }, [])
 
   // cross-domain library
-  useEffect(() => {
+  const reloadAll = useCallback(async () => {
     if (!domains.length) return
-    Promise.all(domains.map(async d => {
+    const lists = await Promise.all(domains.map(async d => {
       const l = await api.scenarios(d.key)
       return (l || []).filter(s => s.node_kind === 'fault').map(s => ({ ...s, domainKey: d.key, domainName: d.name }))
-    })).then(lists => setAllScenarios(lists.flat())).catch(() => {})
+    }))
+    setAllScenarios(lists.flat())
   }, [domains])
+  useEffect(() => { reloadAll().catch(() => {}) }, [reloadAll])
+
+  // Follow the hub's twin. Only when that twin actually HAS an engine domain — otherwise
+  // keep whatever is selected rather than switching to something unrelated.
+  useEffect(() => { if (activeDomain) setDomain(activeDomain) }, [activeDomain])
 
   const loadScenarios = useCallback(async (d) => {
     const list = await api.scenarios(d)
@@ -100,15 +117,17 @@ export function StoreProvider({ children }) {
   const value = useMemo(() => ({
     engineUp,
     domains, domain, setDomain,
+    activeDomain, activeTwinName: twinName || null,
     scenarios, scenarioId, setScenarioId, reloadScenarios: () => loadScenarios(domain),
-    allScenarios, favorites, toggleFav, openScenario,
+    allScenarios, reloadAll, favorites, toggleFav, openScenario,
     simSel, setSimSel, builderPick, setBuilderPick, openInBuilder,
     readiness, setReadiness,
     graph, running, error, run,
     mc, mcRunning, runMonteCarlo,
     selected: scenarios.find(s => s.id === scenarioId) || null,
-  }), [engineUp, domains, domain, scenarios, scenarioId, allScenarios, favorites, simSel, builderPick, toggleFav,
-    openScenario, openInBuilder, readiness, graph, running, error, run, mc, mcRunning, runMonteCarlo, loadScenarios])
+  }), [engineUp, domains, domain, activeDomain, twinName, scenarios, scenarioId, allScenarios, reloadAll, favorites,
+    simSel, builderPick, toggleFav, openScenario, openInBuilder, readiness, graph, running, error, run,
+    mc, mcRunning, runMonteCarlo, loadScenarios])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

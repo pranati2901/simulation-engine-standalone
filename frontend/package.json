@@ -1,9 +1,9 @@
 {
-  "name": "simcore-frontend",
+  "name": "goalcert-scenario-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "SimCore — React frontend for the standalone simulation engine. One engine, three modes (Decision / Training / Twin).",
+  "description": "Goalcert Scenario Engine — React frontend. Runs standalone, and federates ScenarioRemoteApp into the Goalcert Integration Hub.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,6 +15,7 @@
     "react-router-dom": "^6.30.4"
   },
   "devDependencies": {
+    "@originjs/vite-plugin-federation": "^1.4.1",
     "@vitejs/plugin-react": "^4.3.2",
     "vite": "^5.4.8"
   }

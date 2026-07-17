@@ -28,10 +28,16 @@ from ..engine.config import RunConfig
 from ..engine.environment import EnvironmentSpec
 from ..engine.graph import RunGraph
 from ..engine.result import RunResult
-from ..scenarios.loader import get_scenario
+from ..scenarios.loader import get_scenario, resolver_for
 from . import runner
 
-_GRAPHS: dict[str, RunGraph] = {}  # see module docstring — intentionally not persisted yet
+# Run graphs, keyed by root_run_id. In-memory on purpose — see the module docstring.
+#
+# TENANCY: the VALUE carries its owner (org, graph) rather than the key, so a lookup can
+# check ownership. Keying by (org, id) would look equivalent and isn't: get_graph would
+# then need the org to build the key, and any caller that forgot would silently miss
+# instead of being refused.
+_GRAPHS: dict[str, tuple[str | None, RunGraph]] = {}
 
 
 class RunRecord(BaseModel):
@@ -45,13 +51,13 @@ class RunRecord(BaseModel):
     parent_run_id: str | None = None   # Phase 2 — Dynamic Scenario Graph fork/spawn lineage
 
 
-def _save(record: RunRecord) -> None:
+def _save(record: RunRecord, org: str | None) -> None:
     db = SessionLocal()
     try:
         row = db.get(RunORM, record.id)
         data = record.model_dump(mode="json")
         if row is None:
-            db.add(RunORM(id=record.id, scenario_id=record.scenario_id, data=data))
+            db.add(RunORM(id=record.id, scenario_id=record.scenario_id, data=data, org_id=org))
         else:
             row.scenario_id = record.scenario_id
             row.data = data
@@ -60,8 +66,9 @@ def _save(record: RunRecord) -> None:
         db.close()
 
 
-def start_run(scenario_id: str, config: RunConfig, environment: EnvironmentSpec | None = None) -> RunRecord:
-    scenario = get_scenario(scenario_id)
+def start_run(scenario_id: str, config: RunConfig, environment: EnvironmentSpec | None = None,
+              org: str | None = None) -> RunRecord:
+    scenario = get_scenario(scenario_id, org)
     if scenario is None:
         raise KeyError(f"Unknown scenario '{scenario_id}'")
 
@@ -73,47 +80,60 @@ def start_run(scenario_id: str, config: RunConfig, environment: EnvironmentSpec 
 
     record.result = runner.execute(scenario, env, config)
     record.status = "complete"
-    _save(record)
+    _save(record, org)
     return record
 
 
 def start_run_graph(scenario_id: str, config: RunConfig,
-                    environment: EnvironmentSpec | None = None) -> RunGraph:
+                    environment: EnvironmentSpec | None = None,
+                    org: str | None = None) -> RunGraph:
     """Run a scenario AND every scenario its triggers cascade into — a run graph.
 
     Deterministic: the same (scenario, config) always produces the same graph. See
     engine/graph.py for why (no RNG / wall-clock; child ids derived from the root).
     """
-    scenario = get_scenario(scenario_id)
+    scenario = get_scenario(scenario_id, org)
     if scenario is None:
         raise KeyError(f"Unknown scenario '{scenario_id}'")
     env = environment or scenario.recommended_environment or EnvironmentSpec(domain=scenario.domain)
     root_run_id = str(uuid.uuid4())
     rg = graph_engine.run_graph(
         scenario, env, config,
-        root_run_id=root_run_id, get_scenario=get_scenario, execute=runner.execute,
+        # Org-bound: cascades must resolve within what this tenant can see, or an org's
+        # authored scenario could never cascade into its own other scenarios.
+        root_run_id=root_run_id, get_scenario=resolver_for(org), execute=runner.execute,
     )
-    _GRAPHS[rg.root_run_id] = rg
+    _GRAPHS[rg.root_run_id] = (org, rg)
     return rg
 
 
-def get_graph(root_run_id: str) -> RunGraph | None:
-    return _GRAPHS.get(root_run_id)
+def get_graph(root_run_id: str, org: str | None = None) -> RunGraph | None:
+    """Another tenant's graph reads as None — same as a run they can't see."""
+    entry = _GRAPHS.get(root_run_id)
+    if entry is None:
+        return None
+    owner, rg = entry
+    return rg if owner == org else None
 
 
-def get_run(run_id: str) -> RunRecord | None:
+def get_run(run_id: str, org: str | None = None) -> RunRecord | None:
     db = SessionLocal()
     try:
         row = db.get(RunORM, run_id)
-        return RunRecord(**row.data) if row else None
+        if row is None or row.org_id != org:
+            return None   # not found, or not yours — same answer either way
+        return RunRecord(**row.data)
     finally:
         db.close()
 
 
-def list_runs(scenario_id: str | None = None) -> list[RunRecord]:
+def list_runs(scenario_id: str | None = None, org: str | None = None) -> list[RunRecord]:
     db = SessionLocal()
     try:
-        q = db.query(RunORM)
+        # Equality, not the scenarios' "IS NULL OR mine" rule: runs are never shared.
+        # `== None` compiles to `IS NULL` in SQLAlchemy, which is what we want for the
+        # org-less standalone case.
+        q = db.query(RunORM).filter(RunORM.org_id == org)
         if scenario_id:
             q = q.filter(RunORM.scenario_id == scenario_id)
         runs = [RunRecord(**row.data) for row in q.all()]

@@ -5,26 +5,30 @@ one run's worth of data to aggregate.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from ..core.tenancy import current_org
 from ..services import run_manager
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary")
-def summary():
-    return _build_summary()
+def summary(org: str | None = Depends(current_org)):
+    return _build_summary(org)
 
 
 @router.get("")
-def dashboard_root():
+def dashboard_root(org: str | None = Depends(current_org)):
     """GET /dashboard — alias for /dashboard/summary, expected by the Hub."""
-    return _build_summary()
+    return _build_summary(org)
 
 
-def _build_summary() -> dict:
-    runs = run_manager.list_runs()
+def _build_summary(org: str | None = None) -> dict:
+    # Tenant-scoped. Unscoped this aggregated EVERY org's runs into one summary, so a
+    # tenant's "total runs" silently included other tenants' activity — a cross-tenant
+    # leak in the one endpoint the hub calls by default.
+    runs = run_manager.list_runs(org=org)
     domains: dict[str, int] = {}
     scenarios_seen: set[str] = set()
     for r in runs:

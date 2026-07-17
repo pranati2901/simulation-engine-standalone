@@ -1,9 +1,10 @@
 """POST /runs, GET /runs/{id} — execute and inspect scenario runs."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from ..core.tenancy import current_org
 from ..engine.config import RunConfig
 from ..engine.environment import EnvironmentSpec
 from ..engine.monte_carlo import MonteCarloResult, run_monte_carlo
@@ -74,21 +75,21 @@ def _mode_view(nodes: list[dict], edges: list[dict], mode: str) -> dict:
 
 
 @router.post("")
-def start_run(req: StartRunRequest):
+def start_run(req: StartRunRequest, org: str | None = Depends(current_org)):
     try:
-        record = run_manager.start_run(req.scenario_id, req.config, req.environment)
+        record = run_manager.start_run(req.scenario_id, req.config, req.environment, org=org)
     except KeyError as e:
         raise HTTPException(404, str(e))
     return record
 
 
 @router.post("/graph")
-def start_run_graph(req: StartRunRequest):
+def start_run_graph(req: StartRunRequest, org: str | None = Depends(current_org)):
     """Run a scenario and the full cascade of scenarios its triggers spawn — the
     Dynamic Scenario Graph. Returns a RunGraph (nodes + edges + rollups) plus a
     `mode_view` tailored to req.mode (decision | training | twin)."""
     try:
-        rg = run_manager.start_run_graph(req.scenario_id, req.config, req.environment)
+        rg = run_manager.start_run_graph(req.scenario_id, req.config, req.environment, org=org)
     except KeyError as e:
         raise HTTPException(404, str(e))
     data = rg.model_dump(mode="json") if hasattr(rg, "model_dump") else dict(rg)
@@ -98,17 +99,17 @@ def start_run_graph(req: StartRunRequest):
 
 
 @router.get("/graph/{root_run_id}")
-def get_run_graph(root_run_id: str):
-    rg = run_manager.get_graph(root_run_id)
+def get_run_graph(root_run_id: str, org: str | None = Depends(current_org)):
+    rg = run_manager.get_graph(root_run_id, org)
     if rg is None:
         raise HTTPException(404, f"Unknown run graph '{root_run_id}'")
     return rg
 
 
 @router.get("/{run_id}/events")
-def get_run_events(run_id: str):
+def get_run_events(run_id: str, org: str | None = Depends(current_org)):
     """Return events for a run from the engine's event log."""
-    record = run_manager.get_run(run_id)
+    record = run_manager.get_run(run_id, org)
     if record is None:
         raise HTTPException(404, f"Unknown run '{run_id}'")
     if record.result is None:
@@ -117,16 +118,16 @@ def get_run_events(run_id: str):
 
 
 @router.get("/{run_id}")
-def get_run(run_id: str):
-    record = run_manager.get_run(run_id)
+def get_run(run_id: str, org: str | None = Depends(current_org)):
+    record = run_manager.get_run(run_id, org)
     if record is None:
         raise HTTPException(404, f"Unknown run '{run_id}'")
     return record
 
 
 @router.get("")
-def list_runs(scenario_id: str | None = None):
-    return run_manager.list_runs(scenario_id)
+def list_runs(scenario_id: str | None = None, org: str | None = Depends(current_org)):
+    return run_manager.list_runs(scenario_id, org=org)
 
 
 class MonteCarloRequest(BaseModel):
@@ -138,12 +139,12 @@ class MonteCarloRequest(BaseModel):
 
 
 @router.post("/monte-carlo")
-def run_monte_carlo_endpoint(req: MonteCarloRequest) -> MonteCarloResult:
+def run_monte_carlo_endpoint(req: MonteCarloRequest, org: str | None = Depends(current_org)) -> MonteCarloResult:
     """Mode 1 (Operational Intelligence): run the scenario N times across a
     readiness range and return probability/confidence-range style output instead
     of a single deterministic result. Not persisted yet — returned directly.
     """
-    scenario = get_scenario(req.scenario_id)
+    scenario = get_scenario(req.scenario_id, org)
     if scenario is None:
         raise HTTPException(404, f"Unknown scenario '{req.scenario_id}'")
     if not (1 <= req.iterations <= 1000):

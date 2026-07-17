@@ -3,10 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SimCore</title>
+    <meta name="theme-color" content="#6d28d9" />
+    <title>Goalcert · Scenario Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!--
+      The document reset lives HERE, not in styles.css, and that is deliberate.
+      styles.css is linked into the HUB's <head> when this app runs as a federated remote,
+      so a bare body{}/*{} rule in it would restyle the hub's own chrome (integration plan
+      §0.8). index.html is standalone-only — it never ships to the hub — so this is the one
+      safe place for it. The hub ships its own equivalent reset.
+    -->
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { height: 100%; }
+      body { background: #f7f7fb; -webkit-font-smoothing: antialiased; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #d8d4e6; border-radius: 6px; border: 2px solid #f7f7fb; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

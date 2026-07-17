@@ -9,7 +9,7 @@ import json
 import logging
 import uuid
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from ..core.settings import settings
@@ -24,6 +24,7 @@ from ..engine.scenario import (
     TargetSelector,
 )
 from ..plugins.registry import get_plugin, list_plugins
+from ..core.tenancy import current_org
 from ..scenarios.loader import register_scenario
 from ..services import runner
 
@@ -188,7 +189,7 @@ def _generate_scenario_fallback(description: str, domain: str) -> dict:
 
 
 @router.post("/scenarios/author")
-async def author_scenario(req: AuthorRequest):
+async def author_scenario(req: AuthorRequest, org: str | None = Depends(current_org)):
     """Generate a scenario spec from natural language using AI."""
     domain = _resolve_domain(req.domain)
     plugin = get_plugin(domain)
@@ -214,7 +215,9 @@ async def author_scenario(req: AuthorRequest):
         node_kind="fault",
     )
 
-    register_scenario(scenario)
+    # Owned by the calling tenant. Registering unscoped here would publish one org's
+    # studio scenario into every other org's library.
+    register_scenario(scenario, org)
 
     return {
         "scenario_id": scenario.id,
@@ -230,11 +233,11 @@ class StudioRunRequest(BaseModel):
 
 
 @router.post("/runs")
-def studio_run(req: StudioRunRequest):
+def studio_run(req: StudioRunRequest, org: str | None = Depends(current_org)):
     """Run a scenario created in the studio."""
     from ..scenarios.loader import get_scenario
 
-    scenario = get_scenario(req.scenario_id)
+    scenario = get_scenario(req.scenario_id, org)
     if scenario is None:
         raise HTTPException(404, f"Scenario '{req.scenario_id}' not found")
 
