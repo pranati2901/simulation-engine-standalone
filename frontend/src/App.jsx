@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useStore } from './store.jsx'
 import Icon from './components/Icon.jsx'
@@ -34,25 +34,72 @@ const NAV = [
   { to: '/assumptions', id: 'assumptions', label: 'Assumptions', icon: 'assumptions', color: '#6b7280', title: 'Model Assumptions', sub: 'Cost & impact rates — your inputs' },
 ]
 
+// Domain landing — EV is fully built; the others reuse the generic tabs until configured.
+const DOMAINS = [
+  { id: 'ev', name: 'EV Charging', engine: 'ev', desc: 'Charging networks, energy & fleet', icon: 'simulation', color: '#7c3aed', ready: true },
+  { id: 'healthcare', name: 'Healthcare', engine: 'hospital', desc: 'Hospitals, OR & capacity', icon: 'twin', color: '#0891b2' },
+  { id: 'railway', name: 'Railway', engine: 'railway', desc: 'Rail operations & delays', icon: 'dashboard', color: '#059669' },
+  { id: 'defence', name: 'Defence', engine: 'defence', desc: 'Readiness & response', icon: 'warroom', color: '#6d28d9' },
+  { id: 'aerospace', name: 'Aerospace', engine: 'aerospace', desc: 'Fleet & AOG', icon: 'reports', color: '#2563eb' },
+]
+const EV_NAV_IDS = ['simulate', 'network', 'data', 'reports', 'library']
+const GENERIC_NAV_IDS = ['dashboard', 'warroom', 'library', 'decision', 'training', 'twin', 'assumptions']
+
+function DomainChooser({ onPick }) {
+  return (
+    <div className="dc">
+      <div className="dc-brand">◆ SimCore</div>
+      <h1 className="dc-h1">Choose your domain</h1>
+      <p className="dc-sub">Pick the operation you want to simulate. EV Charging is fully built; the rest reuse the generic toolkit for now.</p>
+      <div className="dc-grid">
+        {DOMAINS.map(d => (
+          <button key={d.id} className="dc-card" onClick={() => onPick(d)} style={{ '--dc': d.color }}>
+            <span className="dc-ic"><Icon name={d.icon} size={26} /></span>
+            <b>{d.name}</b>
+            <span className="dc-desc">{d.desc}</span>
+            <span className={`dc-tag ${d.ready ? '' : 'muted'}`}>{d.ready ? '● Ready' : 'Configure later'}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
-  const { domains, domain, setDomain, engineUp } = useStore()
+  const { setDomain, engineUp } = useStore()
   const loc = useLocation()
-  const active = NAV.find(n => loc.pathname.startsWith(n.to)) || NAV[0]
+  const [appDomain, setAppDomain] = useState(() => localStorage.getItem('simcore_app_domain') || '')
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('simcore_nav_collapsed') === '1')
   const toggleNav = () => setCollapsed(c => { localStorage.setItem('simcore_nav_collapsed', c ? '0' : '1'); return !c })
+
+  const pickDomain = (d) => { localStorage.setItem('simcore_app_domain', d.id); setAppDomain(d.id) }
+  const changeDomain = () => { localStorage.removeItem('simcore_app_domain'); setAppDomain('') }
+
+  useEffect(() => { const d = DOMAINS.find(x => x.id === appDomain); if (d) setDomain(d.engine) }, [appDomain, setDomain])
+
+  if (!appDomain) return <DomainChooser onPick={pickDomain} />
+
+  const dom = DOMAINS.find(d => d.id === appDomain) || DOMAINS[0]
+  const ids = appDomain === 'ev' ? EV_NAV_IDS : GENERIC_NAV_IDS
+  const navItems = ids.map(id => NAV.find(n => n.id === id)).filter(Boolean)
+  const home = appDomain === 'ev' ? '/simulate' : '/dashboard'
+  const active = navItems.find(n => loc.pathname.startsWith(n.to)) || navItems[0]
 
   return (
     <div data-mode={active.id} className={`app ${collapsed ? 'nav-collapsed' : ''}`}>
       <aside className="sidebar no-print">
         <div className="side-brand"><span className="dot">◆</span> <span className="brand-label">SimCore</span></div>
+        <button className="side-domain" onClick={changeDomain} title="Change domain">
+          <span className="nav-label">{dom.name}</span><span className="dom-swap">⇄</span>
+        </button>
         <nav className="side-nav">
-          {NAV.map(n => (
+          {navItems.map(n => (
             <NavLink key={n.id} to={n.to} title={n.label} className={({ isActive }) => isActive ? 'on' : ''} style={{ '--nav': n.color }}>
               <Icon name={n.icon} /> <span className="nav-label">{n.label}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="side-foot">v0.1 · Operational Intelligence</div>
+        <div className="side-foot">v0.1 · {dom.name}</div>
       </aside>
 
       <div className="main">
@@ -63,9 +110,7 @@ export default function App() {
             <div className="page-sub">{active.sub}</div>
           </div>
           <div className="spacer" />
-          <select className="select" value={domain} onChange={e => setDomain(e.target.value)} disabled={!domains.length}>
-            {domains.map(d => <option key={d.key} value={d.key}>{d.name}</option>)}
-          </select>
+          <div className="dom-chip" onClick={changeDomain} title="Change domain">{dom.name} ⇄</div>
           <div className="avatar" title="Signed-in operator">OP</div>
         </header>
 
@@ -74,7 +119,7 @@ export default function App() {
             ? <div className="card"><div className="empty">Can’t reach the engine on <span className="mono">:8002</span>. Start it, then reload.</div></div>
             : (
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/" element={<Navigate to={home} replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/simulate" element={<MissionControl />} />
                 <Route path="/network" element={<Portfolio />} />
@@ -89,7 +134,7 @@ export default function App() {
                 <Route path="/twin" element={<TwinMode />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/assumptions" element={<Assumptions />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to={home} replace />} />
               </Routes>
             )}
         </main>

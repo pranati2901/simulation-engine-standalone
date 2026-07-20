@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import EVWorld from '../components/EVWorld.jsx'
 import GuidedDrill from '../components/GuidedDrill.jsx'
 import { api } from '../api.js'
-import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor } from '../ev/networkModel.js'
+import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor, loadNetwork } from '../ev/networkModel.js'
 import { HEALTHY, HORIZONS, buildScenario, inr, strategiesFor } from '../ev/scenarios.js'
+import { SITES, siteToNetwork } from '../ev/sites.js'
 
 const SUGGESTIONS = [
   'What happens if Transformer T1 trips at 5PM?',
@@ -31,6 +32,7 @@ export default function MissionControl() {
   const [mc, setMc] = useState(null)
   const [repairOpen, setRepairOpen] = useState(false)
   const [horizon, setHorizon] = useState('now')
+  const [siteId, setSiteId] = useState(() => SITES.find(s => MODEL.site.startsWith(s.name))?.id || SITES[0].id)
   const selRef = useRef(null)
   const scenarioRef = useRef(null); scenarioRef.current = scenario
 
@@ -60,8 +62,8 @@ export default function MissionControl() {
     let facts = st.doNothing.scn.facts
     try {
       const r = await api.monteCarlo(engineScenarioFor(assetId), 'ev')
-      const info = { runs: r.iterations, contained_pct: Math.round((r.kpi_stats?.containment_rate?.mean ?? 0) * 100), certified_pct: Math.round((r.certified_rate || 0) * 100) }
-      setMc(info); facts = { ...facts, engine_monte_carlo: info }
+      const info = { runs: r.iterations, contained_pct: Math.round((r.kpi_stats?.containment_rate?.mean ?? 0) * 100), certified_pct: Math.round((r.certified_rate || 0) * 100), samples: r.samples?.containment_rate || [] }
+      setMc(info); facts = { ...facts, engine_monte_carlo: { runs: info.runs, contained_pct: info.contained_pct, certified_pct: info.certified_pct } }
     } catch { /* fall back to model-only grounding */ }
     groundedAnswer({ facts }, q)
   }
@@ -103,6 +105,12 @@ export default function MissionControl() {
     setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null)
     let s = 0
     const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(assetId, faultId, q) } }, 430)
+  }
+
+  const onSite = (id) => {
+    const s = SITES.find(x => x.id === id); if (!s) return
+    loadNetwork(siteToNetwork(s)); setSiteId(id)
+    if (selRef.current) runFault(selRef.current.assetId, selRef.current.faultId)   // re-run on the new site
   }
 
   const pickStrategy = (st) => {
@@ -188,6 +196,9 @@ export default function MissionControl() {
       <div className="mc-top">
         <div className="mc-brand">◆ SimCore</div>
         <div className="mc-q">“{prompt}”</div>
+        <select className="mc-site" value={siteId} onChange={e => onSite(e.target.value)} title="Switch charging site">
+          {SITES.map(s => <option key={s.id} value={s.id}>◉ {s.name}</option>)}
+        </select>
         <div className="mc-time">
           <span>⏱ Time Machine</span>
           {Object.entries(HORIZONS).map(([k, v]) => (
@@ -249,7 +260,20 @@ export default function MissionControl() {
                 <div style={{ width: `${mc.certified_pct}%`, background: '#34e2b0' }} />
                 <div style={{ width: `${100 - mc.certified_pct}%`, background: '#fb7185' }} />
               </div>
-              <div className="mc-mc-note">The engine replayed this fault <b>{mc.runs} times</b> across varying response readiness. This is the <b>probability</b> of the outcome — not a single guess.</div>
+              {mc.samples?.length > 1 && (() => {
+                const bins = new Array(12).fill(0)
+                mc.samples.forEach(c => { bins[Math.min(11, Math.floor(c * 12))]++ })
+                const max = Math.max(1, ...bins)
+                return (
+                  <>
+                    <div className="mc-mc-hist" title="Distribution of containment across all runs">
+                      {bins.map((b, i) => <div key={i} style={{ height: `${Math.max(5, 100 * b / max)}%`, background: i < 4 ? '#fb7185' : i < 8 ? '#fbbf24' : '#34e2b0' }} />)}
+                    </div>
+                    <div className="mc-mc-axis"><span>◀ cascades</span><span>contained ▶</span></div>
+                  </>
+                )
+              })()}
+              <div className="mc-mc-note">The engine replayed this fault <b>{mc.runs} times</b> across varying response readiness — each bar is how many runs landed there. This is the <b>probability</b>, not a single guess.</div>
             </div>
           )}
 
