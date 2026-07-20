@@ -198,14 +198,9 @@ export default function MissionControl() {
       </div>
 
       <div className="mc-body">
-        <aside className="mc-left">
-          <div className="mc-panel-t">Assets — click a fault to simulate</div>
-          {assetPickerJsx}
-        </aside>
-
         <main className="mc-center">
           <div className="mc-stage">
-            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} focusId={focusId} height={400} />
+            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} focusId={focusId} height={540} />
             <div className="mc-vignette" style={{ opacity: crisis }} />
             {narr.length > 0 && <div className="mc-narrate">▸ {narr[narr.length - 1].text}</div>}
           </div>
