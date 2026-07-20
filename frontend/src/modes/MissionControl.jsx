@@ -300,7 +300,7 @@ export default function MissionControl() {
                 : <div><b>{f.peak_grid_load_pct}%</b><span>peak load</span></div>}
             </div>
           )}
-          {f && !answering && (
+          {f && answer && (
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="mc-save" onClick={saveRecord}>{recSaved ? '✓ Saved' : '★ Save'}</button>
               <button className="mc-save" onClick={() => window.print()}>📄 Report</button>
