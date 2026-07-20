@@ -13,4 +13,14 @@ export const SITES = [
 const REV = 18, PEN = 1200, HRS = 6
 export const siteExposure = (s) => Math.round(s.transformer_kw * s.peak_util * REV * HRS + s.chargers * s.peak_util * PEN * HRS)
 export const siteRisk = (s) => (s.peak_util > 0.9 ? 'high' : s.peak_util > 0.75 ? 'med' : 'low')
-export const siteToNetwork = (s) => ({ ...defaultNetwork(), site: `${s.name} · ${s.area}` })
+export const siteToNetwork = (s) => {
+  const net = defaultNetwork()
+  net.site = `${s.name} · ${s.area}`
+  // tariff + ratings vary per site so switching sites changes the ₹ and capacities
+  net.cost = { ...net.cost, rev_inr_per_kwh: Math.round(16 + s.peak_util * 6), demand_charge_inr_per_kw: Math.round(300 + s.transformer_kw * 0.08) }
+  net.assets = net.assets.map(a =>
+    a.type === 'transformer' ? { ...a, rating_kw: s.transformer_kw }
+      : a.type === 'charger_bank' ? { ...a, chargers: Math.max(4, Math.round(s.chargers * 0.5)) }
+        : a)
+  return net
+}

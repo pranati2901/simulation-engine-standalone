@@ -17,6 +17,13 @@ export const HORIZONS = {
   h35: { label: '2035', demand: 2.2, degrade: 0.75 },
 }
 
+// Operating conditions — each worsens the fault (modelled as a hit to effective readiness).
+export const CONDITIONS = [
+  { id: 'peak', label: '⚡ Peak load', pen: 15 },
+  { id: 'heatwave', label: '🔥 Heatwave', pen: 18 },
+  { id: 'rain', label: '🌧 Heavy rain', pen: 8 },
+]
+
 // peak = telemetry at worst; kwDown/stationsDown/faulted drive the $; preventable = share a
 // prepared response can contain; onset/peak = envelope timing; rec = recommended action.
 const SPEC = {
@@ -122,16 +129,18 @@ function envAt(t, onset, peak, recStart) {
   return Math.max(0, 1 - Math.min(1, (t - recStart) / 24))   // slower recovery — stays visible
 }
 
-export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now' } = {}) {
+export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now', conditions = [] } = {}) {
   const spec = getSpec(assetId, faultId)
   const asset = MODEL.assets.find(a => a.id === assetId) || { id: assetId, name: assetId }
   const h = HORIZONS[horizon] || HORIZONS.now
   const dem = h.demand
   const preventable = spec.preventable * h.degrade   // aged infra is harder to contain
-  const contain = readiness / 100
+  const condPen = conditions.reduce((a, c) => a + (CONDITIONS.find(x => x.id === c)?.pen || 0), 0)
+  const readinessEff = Math.max(0, readiness - condPen)   // conditions eat into the response
+  const contain = readinessEff / 100
   const seq = getSeq(assetId, faultId)
   // a prepared response contains the cascade earlier → fewer stages actually fire
-  const stagesFired = readiness >= 85 ? 1 : readiness >= 65 ? 2 : readiness >= 42 ? Math.max(2, seq.length - 1) : seq.length
+  const stagesFired = readinessEff >= 85 ? 1 : readinessEff >= 65 ? 2 : readinessEff >= 42 ? Math.max(2, seq.length - 1) : seq.length
   // Visuals barely dampen with readiness (the fault still visibly happens); the OUTCOME
   // ($, chargers down, recovery speed) is what a prepared response actually reduces.
   const visDamp = 1 - preventable * contain * 0.3
@@ -148,6 +157,8 @@ export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now
     'ev:sessionsActive': Math.round(HEALTHY['ev:sessionsActive'] * Math.min(2, dem)),
     'ev:chargingPower': Math.round(HEALTHY['ev:chargingPower'] * dem),
   }
+  if (conditions.includes('heatwave')) { base['ev:transformerTemp'] += 12; base['ev:cellTempMax'] += 8 }
+  if (conditions.includes('rain')) base['ev:solarOutput'] = Math.round(base['ev:solarOutput'] * 0.4)
 
   let revenueLost = 0, slaPenalty = 0, kwh = 0, sessions = 0, prevFaulted = 0
   const steps = []
@@ -201,7 +212,8 @@ export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now
     chargers_down: spec.faulted || 0, stations_affected: spec.stationsDown, sessions_dropped: sessions,
     kwh_curtailed: Math.round(kwh), revenue_lost_inr: Math.round(revenueLost), sla_penalty_inr: Math.round(slaPenalty),
     total_exposure_inr: Math.round(revenueLost + slaPenalty),
-    preventable_pct: Math.round(preventable * 100), response_readiness_pct: readiness,
+    preventable_pct: Math.round(preventable * 100), response_readiness_pct: readinessEff,
+    conditions: conditions.map(c => CONDITIONS.find(x => x.id === c)?.label || c),
     recommended_action: spec.rec, tariff_inr_per_kwh: cost.rev_inr_per_kwh, sla_penalty_inr_per_hour: cost.penalty_inr_per_hour_down,
   }
   return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, sequence: seq, stagesFired, duration: DUR }
@@ -212,4 +224,27 @@ export function inr(v) {
   if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)}L`
   if (v >= 1e3) return `₹${(v / 1e3).toFixed(0)}k`
   return `₹${Math.round(v)}`
+}
+
+function seededFrac(...parts) {
+  let hsh = 2166136261
+  const s = parts.join('|')
+  for (let i = 0; i < s.length; i++) { hsh ^= s.charCodeAt(i); hsh = Math.imul(hsh, 16777619) }
+  return ((hsh >>> 0) % 100000) / 100000
+}
+
+// Fault-specific Monte Carlo — 120 replays at random readiness; containment is shaped by the
+// fault's own preventable share, so every fault gets a genuinely different distribution.
+export function buildMonteCarlo(assetId, faultId, N = 120) {
+  const spec = getSpec(assetId, faultId)
+  const prev = spec.preventable
+  const samples = []
+  let certified = 0, sum = 0
+  for (let i = 0; i < N; i++) {
+    const r = seededFrac(assetId, faultId, i)
+    const noise = (seededFrac(faultId, i, 'n') - 0.5) * 0.1
+    const c = Math.max(0, Math.min(1, prev * (0.15 + 0.85 * r) + noise))
+    samples.push(c); sum += c; if (c >= 0.5) certified++
+  }
+  return { runs: N, samples, certified_pct: Math.round(100 * certified / N), contained_pct: Math.round(100 * sum / N) }
 }
