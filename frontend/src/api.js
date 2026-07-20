@@ -33,4 +33,6 @@ export const api = {
   author: (domain, prompt) => req('POST', '/scenarios/author', { domain, prompt }),
   ask: (context, question) => req('POST', '/analyst/ask', { context, question }),
   plan: (question, assets) => req('POST', '/analyst/plan', { question, assets }),
+  evOptimize: (assetId, faultId, conditions = []) => req('POST', '/ev/optimize', { assetId, faultId, conditions }),
+  evMultifault: (faults, conditions = []) => req('POST', '/ev/multifault', { faults, conditions }),
 }

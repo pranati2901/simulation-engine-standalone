@@ -36,6 +36,11 @@ export default function MissionControl() {
   const [recSaved, setRecSaved] = useState(false)
   const [conds, setConds] = useState([])
   const [openTab, setOpenTab] = useState(null)
+  const [optResult, setOptResult] = useState(null)
+  const [optBusy, setOptBusy] = useState(false)
+  const [multiMode, setMultiMode] = useState(false)
+  const [multiSel, setMultiSel] = useState([])
+  const [multiInfo, setMultiInfo] = useState(null)
   const [horizon, setHorizon] = useState('now')
   const [siteId, setSiteId] = useState(() => SITES.find(s => MODEL.site.startsWith(s.name))?.id || SITES[0].id)
   const selRef = useRef(null)
@@ -82,7 +87,7 @@ export default function MissionControl() {
 
   const submit = (text) => {
     const q = (text ?? prompt).trim(); if (!q) return
-    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null)
+    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null)
     let resolved = resolveText(q) || { assetId: 'TX-1', faultId: 'overload' }
     const planP = api.plan(q, MODEL.assets.map(a => ({ id: a.id, name: a.name, faults: a.faults })))
       .then(p => {
@@ -103,7 +108,7 @@ export default function MissionControl() {
     const a = assetById(assetId)
     const flabel = faultsFor(assetId).find(x => x.id === faultId)?.label || faultId
     const q = `What happens if ${a?.name || assetId} has a ${flabel.toLowerCase()}?`
-    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null)
+    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null)
     let s = 0
     const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(assetId, faultId, q) } }, 430)
   }
@@ -125,11 +130,34 @@ export default function MissionControl() {
 
   const toggleCond = (id) => {
     const n = conds.includes(id) ? conds.filter(x => x !== id) : [...conds, id]
-    setConds(n)
+    setConds(n); setOptResult(null)
     const sel = selRef.current; if (!sel) return
     const st = buildStrats(sel.assetId, sel.faultId, horizon, n)
     setStrategies(st); setActiveKey('nothing'); setScenario(st.doNothing.scn); setIdx(0); setPlaying(true)
     groundedAnswer(st.doNothing.scn, `What happens under ${n.length ? n.join(' + ') : 'baseline'} conditions?`)
+  }
+
+  const applyOptimum = () => {
+    if (!optResult || !selRef.current) return
+    const sel = selRef.current
+    const scn = buildScenario(sel.assetId, sel.faultId, { readiness: Math.round(optResult.optimal.contain * 100), horizon, conditions: conds })
+    setScenario(scn); setActiveKey('optimum'); setIdx(0); setPlaying(true)
+    groundedAnswer(scn, 'What happens under the optimised response, and what does it cost?')
+  }
+
+  const toggleMulti = (assetId, faultId, label) => {
+    const key = `${assetId}:${faultId}`
+    setMultiSel(cs => cs.some(x => x.key === key) ? cs.filter(x => x.key !== key) : [...cs, { key, assetId, faultId, label }])
+  }
+
+  const runMulti = () => {
+    if (multiSel.length < 2) return
+    const primary = multiSel[0]
+    setPrompt(`${multiSel.length} concurrent faults`); setPhase('thinking'); setReasonStep(0)
+    setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null)
+    api.evMultifault(multiSel.map(m => ({ assetId: m.assetId, faultId: m.faultId })), conds).then(r => setMultiInfo(r)).catch(() => setMultiInfo(null))
+    let s = 0
+    const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(primary.assetId, primary.faultId, `${multiSel.length} concurrent faults`) } }, 430)
   }
 
   const pickStrategy = (st) => {
@@ -144,6 +172,14 @@ export default function MissionControl() {
     try { const r = await api.ask(ctx, `Explain ${asset?.name}'s current status and the recommended action.`); return r.answer || 'No status returned.' }
     catch { return 'Copilot unavailable.' }
   }
+
+  useEffect(() => {
+    const ff = scenario?.facts
+    if (openTab === 'optimize' && ff && !optResult && !optBusy) {
+      setOptBusy(true)
+      api.evOptimize(ff.assetId, ff.faultId, conds).then(r => setOptResult(r)).catch(() => {}).finally(() => setOptBusy(false))
+    }
+  }, [openTab, scenario, optResult, optBusy, conds]) // eslint-disable-line
 
   useEffect(() => {
     if (!playing || !scenario) return
@@ -173,7 +209,11 @@ export default function MissionControl() {
         <div key={a.id} className="mc-asset-row">
           <div className="mc-asset-name">{a.name}</div>
           <div className="mc-asset-faults">
-            {faultsFor(a.id).map(fo => <button key={fo.id} className="mc-fault-chip" onClick={() => runFault(a.id, fo.id)}>{fo.label}</button>)}
+            {faultsFor(a.id).map(fo => {
+              const on = multiSel.some(x => x.key === `${a.id}:${fo.id}`)
+              return <button key={fo.id} className={`mc-fault-chip ${multiMode && on ? 'on' : ''}`}
+                onClick={() => (multiMode ? toggleMulti(a.id, fo.id, `${a.name} · ${fo.label}`) : runFault(a.id, fo.id))}>{fo.label}</button>
+            })}
           </div>
         </div>
       ))}
@@ -228,6 +268,29 @@ export default function MissionControl() {
     </div>
   ) : null
 
+  const optimizerJsx = optBusy ? (
+    <div className="mc-muted"><span className="spin" /> searching response combinations for the optimum…</div>
+  ) : optResult ? (
+    <div className="mc-opt">
+      <div className="mc-opt-note">Searched <b>{optResult.evaluations}</b> lever combinations to minimise <b>total cost</b> (residual damage + cost of responding). The optimum saves <b style={{ color: '#34e2b0' }}>{inr(optResult.savings)}</b> vs doing nothing.</div>
+      <div className="mc-opt-levers">
+        {optResult.levers.map(l => (
+          <div key={l.id} className="mc-opt-lever">
+            <div className="mc-opt-ll"><span>{l.label}</span><b>{Math.round(l.value * 100)}%</b></div>
+            <div className="mc-opt-bar"><div style={{ width: `${l.value * 100}%` }} /></div>
+          </div>
+        ))}
+      </div>
+      <div className="mc-opt-stats">
+        <div><b>{inr(optResult.optimal.residual)}</b><span>residual damage</span></div>
+        <div><b>{inr(optResult.optimal.action_cost)}</b><span>response cost</span></div>
+        <div><b>{inr(optResult.optimal.total)}</b><span>total (optimised)</span></div>
+        <div><b style={{ color: '#34e2b0' }}>{inr(optResult.savings)}</b><span>saved vs nothing</span></div>
+      </div>
+      <button className="mc-save" style={{ marginTop: 12 }} onClick={applyOptimum}>▶ Apply the optimum to the twin</button>
+    </div>
+  ) : <div className="mc-muted">Computing the optimum…</div>
+
   if (phase === 'home') return (
     <div className="mc mc-home">
       <div className="mc-brand">◆ SimCore</div>
@@ -239,8 +302,17 @@ export default function MissionControl() {
       </div>
       <div className="mc-sugg">{SUGGESTIONS.map(s => <button key={s} onClick={() => submit(s)}>{s}</button>)}</div>
       <div className="mc-assets-home">
-        <div className="mc-assets-t">Or pick an asset &amp; fault — the exact things this twin can simulate</div>
+        <div className="mc-assets-t" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span>{multiMode ? 'Pick 2+ faults, then simulate them together' : 'Or pick an asset & fault to simulate'}</span>
+          <button className="mc-fault-chip" onClick={() => { setMultiMode(m => !m); setMultiSel([]) }}>{multiMode ? '✓ combining' : '🔀 combine faults'}</button>
+        </div>
         {assetPickerJsx}
+        {multiMode && (
+          <div className="mc-multi-bar">
+            {multiSel.map(m => <span key={m.key} className="mc-multi-chip" onClick={() => toggleMulti(m.assetId, m.faultId)}>{m.label} ✕</span>)}
+            <button className="mc-new" style={{ marginLeft: 'auto' }} disabled={multiSel.length < 2} onClick={runMulti}>▶ Simulate {multiSel.length || ''} together</button>
+          </div>
+        )}
         <div className="mc-assets-t" style={{ marginTop: 12 }}>Add operating conditions (worsen the fault)</div>
         {condChipsJsx}
       </div>
@@ -298,6 +370,11 @@ export default function MissionControl() {
                 : <>✓ <b>{activeStrat.name}</b> — exposure cut to <b>{inr(activeStrat.exposure)}</b>, saving <b>{inr(saved)}</b> ({Math.round(100 * saved / (strategies.baseExposure || 1))}% less than doing nothing).</>}
             </div>
           )}
+          {multiInfo && multiInfo.count > 1 && (
+            <div className="mc-compare bad">
+              ⚠ <b>{multiInfo.count} concurrent faults</b> — combined exposure <b>{inr(multiInfo.combined_exposure)}</b> (+{multiInfo.interaction_pct}% compounding vs {inr(multiInfo.base_exposure)} if they hit separately).
+            </div>
+          )}
           <div className="mc-timeline">
             {events.map((e, i) => (
               <button key={i} className={`mc-ev ${e.kind}`} onClick={() => seek(e.t)}>
@@ -353,10 +430,15 @@ export default function MissionControl() {
       {scenario && (
         <>
           <div className="mc-tiles">
+            <button className={`mc-tile ${openTab === 'optimize' ? 'on' : ''}`} onClick={() => toggleTab('optimize')}>
+              <span className="mc-tile-ic">🎯</span>
+              <span className="mc-tile-t">Optimizer</span>
+              <span className="mc-tile-s">find the best response</span>
+            </button>
             <button className={`mc-tile ${openTab === 'strategies' ? 'on' : ''}`} onClick={() => toggleTab('strategies')}>
               <span className="mc-tile-ic">📊</span>
               <span className="mc-tile-t">Strategies</span>
-              <span className="mc-tile-s">{strategies?.list.length || 0} options · pick a fix</span>
+              <span className="mc-tile-s">{strategies?.list.length || 0} preset fixes</span>
             </button>
             <button className={`mc-tile ${openTab === 'repair' ? 'on' : ''}`} onClick={() => toggleTab('repair')}>
               <span className="mc-tile-ic">🔧</span>
@@ -369,6 +451,7 @@ export default function MissionControl() {
               <span className="mc-tile-s">{SITES.length} sites · switch &amp; compare</span>
             </button>
           </div>
+          {openTab === 'optimize' && <div className="mc-tile-body">{optimizerJsx}</div>}
           {openTab === 'strategies' && <div className="mc-tile-body">{strategiesJsx}</div>}
           {openTab === 'repair' && drillScenario && <div className="mc-tile-body"><GuidedDrill key={drillScenario.id} scenario={drillScenario} /></div>}
           {openTab === 'network' && <div className="mc-tile-body">{netPanelJsx}</div>}
