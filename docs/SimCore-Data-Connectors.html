@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SimCore — Data Connectors</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #17203a; font-size: 10.5px; line-height: 1.5; margin: 0; }
+  h1 { font-size: 21px; margin: 0 0 2px; letter-spacing: -.3px; }
+  h2 { font-size: 12.5px; margin: 18px 0 7px; padding-bottom: 4px; border-bottom: 2px solid #7c3aed; color: #4c1d95; }
+  .sub { color: #6b7280; font-size: 11px; margin: 0; }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 3px solid #7c3aed; padding-bottom: 9px; }
+  .brand .who { font-weight: 800; color: #7c3aed; letter-spacing: .5px; }
+  .lead { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 12px; margin: 13px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+  th { text-align: left; background: #f3f4f6; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; color: #4b5563; padding: 5px 7px; border: 1px solid #e5e7eb; }
+  td { padding: 5px 7px; border: 1px solid #e5e7eb; vertical-align: top; }
+  td.k { font-weight: 700; white-space: nowrap; color: #111827; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 9.5px; }
+  .pill { display: inline-block; border-radius: 20px; padding: 1px 7px; font-size: 8.5px; font-weight: 700; }
+  .p-min { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .p-full { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .foot { margin-top: 20px; padding-top: 9px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; }
+  ul { margin: 4px 0; padding-left: 16px; }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <div><h1>SimCore — Data Connectors</h1><p class="sub">What we connect to, and what we need from your side</p></div>
+    <div class="who">NextXR · SimCore</div>
+  </div>
+
+  <div class="lead">
+    <b>How it works.</b> SimCore never invents results. It builds a live model (a <b>semantic asset graph</b>) of your
+    real operation from the systems below, then the simulation engine computes outcomes on that model. The more you
+    connect, the sharper the twin — but a pilot starts with a small <span class="pill p-min">MINIMUM</span> set and expands to the
+    <span class="pill p-full">FULL</span> picture over time. All access is <b>read-only</b>; no control commands are ever sent to your equipment.
+  </div>
+
+  <h2>1 · Assets &amp; topology — builds the twin's structure</h2>
+  <table>
+    <tr><th>Source system</th><th>What we pull</th><th>Powers</th><th></th></tr>
+    <tr><td class="k">Asset register / CMMS<br>(SAP, IBM Maximo)</td><td>Every asset with an ID + rating: transformers, feeders, chargers, BESS, solar, switchgear, breakers</td><td>The nodes of the twin</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">GIS / single-line diagram</td><td>Electrical &amp; spatial topology: charger→feeder→transformer→substation; site layout</td><td>The cascade (what's downstream)</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">Digital-twin / BIM (if any)</td><td>3D layout, coordinates</td><td>Scene accuracy</td><td><span class="pill p-full">FULL</span></td></tr>
+  </table>
+
+  <h2>2 · Live telemetry — makes the twin real-time</h2>
+  <table>
+    <tr><th>Source system</th><th>What we pull</th><th>Powers</th><th></th></tr>
+    <tr><td class="k">Charging stations (OCPP 1.6/2.0.1)</td><td>StatusNotification, MeterValues (kWh, power, current, voltage, temp, SoC), sessions, error/fault codes</td><td>Utilisation, faults, revenue base</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">SCADA / EMS / meters</td><td>Feeder load, transformer &amp; BESS temperature, voltage/frequency, power flow</td><td>Overload / thermal triggers</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">BMS (buildings)</td><td>Building load, HVAC demand</td><td>Shared-transformer contention</td><td><span class="pill p-full">FULL</span></td></tr>
+    <tr><td class="k">IoT sensors / streams (MQTT, Kafka)</td><td>Any additional real-time signals</td><td>Higher-fidelity state</td><td><span class="pill p-full">FULL</span></td></tr>
+  </table>
+
+  <h2>3 · Commercial &amp; market — puts real money on it</h2>
+  <table>
+    <tr><th>Source system</th><th>What we pull</th><th>Powers</th><th></th></tr>
+    <tr><td class="k">Utility contract</td><td>Time-of-use tariff, <b>demand charges</b> (per kW), connection terms</td><td>Cost of curtailment &amp; demand spikes</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">CPO / SLA contracts</td><td>Pricing to drivers, uptime targets, penalty per hour down, reimbursements</td><td>Revenue &amp; SLA exposure</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">Electricity-market feed</td><td>Live spot / day-ahead prices</td><td>Price-shock scenarios, V2G arbitrage</td><td><span class="pill p-full">FULL</span></td></tr>
+    <tr><td class="k">ERP</td><td>O&amp;M costs, truck-roll cost, spares</td><td>Response cost modelling</td><td><span class="pill p-full">FULL</span></td></tr>
+  </table>
+
+  <h2>4 · History &amp; context — calibrates the model</h2>
+  <table>
+    <tr><th>Source system</th><th>What we pull</th><th>Powers</th><th></th></tr>
+    <tr><td class="k">Monitoring / CMMS history</td><td>Past faults per asset: type, frequency, mean repair time</td><td><b>Real failure probabilities &amp; MTTR</b> (not guesses)</td><td><span class="pill p-full">FULL</span></td></tr>
+    <tr><td class="k">Weather API</td><td>Forecast temperature, rain, irradiance</td><td>Weather / solar scenarios</td><td><span class="pill p-min">MIN</span></td></tr>
+    <tr><td class="k">Fleet / demand forecast</td><td>Expected traffic &amp; demand (you likely already produce this)</td><td>Stress-test input</td><td><span class="pill p-min">MIN</span></td></tr>
+  </table>
+
+  <h2>Formats, pilot scope &amp; security</h2>
+  <ul>
+    <li><b>Formats:</b> read-only API, OCPP feed, SQL / time-series DB, MQTT/Kafka, or CSV/Excel export. We are hardware-agnostic and speak the standards — no changes to your stack.</li>
+    <li><b>Pilot minimum:</b> the <span class="pill p-min">MIN</span> rows for a single site (3–5 stations). Everything else sharpens accuracy and can be added incrementally.</li>
+    <li><b>Security:</b> read-only; data can be anonymised (asset codes, not addresses); no control signals are ever issued to your equipment.</li>
+  </ul>
+
+  <div class="foot">NextXR · SimCore — Data Connectors v1 · Confidential · The simulation engine is the source of truth; the AI only interprets and explains.</div>
+</body>
+</html>

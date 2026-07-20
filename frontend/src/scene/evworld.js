@@ -156,6 +156,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
   const sc = sun.shadow.camera; sc.left = -46; sc.right = 46; sc.top = 46; sc.bottom = -46; sun.shadow.bias = -0.0004
   scene.add(sun)
   const fill = new THREE.DirectionalLight(0x86f7d6, 0.35); fill.position.set(-26, 18, -18); scene.add(fill)
+  const alertLight = new THREE.PointLight(0xff1a2e, 0, 90); alertLight.position.set(0, 16, -2); scene.add(alertLight)
 
   // ground + site pad
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x0a0d18, roughness: 1 }))
@@ -164,6 +165,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
   const pad = slab(64, 52, M.pad, 3); scene.add(pad)
 
   const animators = []   // {kind, obj, ...}
+  let alertLevel = 0     // 0..1 site-wide crisis → red alert light + fog
   const selectable = []  // clickable asset groups
   const labels = []      // world-anchored HTML callouts {el, pos}
   const flows = {}       // named flow lines
@@ -249,8 +251,8 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
 
   // ── DC fast-charging island (the hero chargers, near the entry) ──
   const dcfcGroup = []
-  for (let i = 0; i < 4; i++) {
-    const dz = -14 + i * 3.2
+  for (let i = 0; i < 8; i++) {
+    const dz = -15 + i * 2.4
     const u = grp()
     u.add(box(1.5, 2.5, 1.1, M.white, 0, 1.25, 0))
     u.add(box(1.2, 1.0, 0.12, M.screen, 0, 1.7, 0.57))
@@ -486,8 +488,9 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       txa.status = txTone
       txa.metrics = [['Load', '%', Math.round(dat.gridLoad)], ['Temp', '°C', Math.round(dat.transformerTemp)],
         ['Headroom', '%', Math.round(dat.headroom)], ['Peak', 'kW', Math.round(dat.peakDemand)]]
-      if (txa.band) { txa.band.material.color.copy(txCol); txa.band.material.emissive.copy(txCol) }
-      if (txa.light) { txa.light.material.color.copy(txCol); txa.light.material.emissive.copy(txCol) }
+      const txI = txTone === 'crit' ? 2.8 : txTone === 'warn' ? 1.6 : 0.7
+      if (txa.band) { txa.band.material.color.copy(txCol); txa.band.material.emissive.copy(txCol); txa.band.material.emissiveIntensity = txI }
+      if (txa.light) { txa.light.material.color.copy(txCol); txa.light.material.emissive.copy(txCol); txa.light.material.emissiveIntensity = txI }
     }
     setLabel(lblTx, 'Transformer T1', Math.round(dat.gridLoad) + '%', txTone)
     setLabel(lblEms, 'EMS headroom', Math.round(dat.headroom) + '%', dat.headroom < 8 ? 'crit' : dat.headroom < 15 ? 'warn' : 'ok')
@@ -502,7 +505,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       const on = i < lit
       const col = bessTone === 'crit' && on ? alertRed : bessTone === 'warn' && on ? amber : on ? green : _c.set(0x0a3a30)
       mods[i].material.emissive.copy(col); mods[i].material.color.copy(col)
-      mods[i].material.emissiveIntensity = on ? 0.9 : 0.25
+      mods[i].material.emissiveIntensity = on ? (bessTone === 'crit' ? 2.6 : 0.9) : 0.25
     }
     setLabel(lblBess, 'BESS', Math.round(dat.bessSoc) + '%', bessTone)
     const bessAsset = selectable.find(s => s.userData.asset.id === 'BESS-A')
@@ -510,23 +513,35 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       bessAsset.userData.asset.metrics = [['SoC', '%', Math.round(dat.bessSoc)], ['Power', 'kW', Math.round(dat.bessPower)],
         ['Cell max', '°C', Math.round(dat.cellMax)], ['Runaway', '%', Math.round(dat.runaway)]] }
 
-    // faulted chargers → mark some DCFC/AC red
-    let faultsLeft = dat.faulted
+    // faulted chargers → recolour their indicator red (deterministic each frame + restore)
+    let need = dat.faulted
     for (const u of [...store.dcfc, ...bays]) {
       const a = u.userData.asset
-      if (faultsLeft > 0 && a.status !== 'crit') { a.status = 'crit'; a._faulted = true; faultsLeft-- }
-      else if (a._faulted && faultsLeft <= 0) { a.status = a.id === 'DCFC-03' ? 'warn' : 'ok'; a._faulted = false }
+      const ind = a.strip || a.led
+      const crit = need > 0; if (crit) need--
+      const st = crit ? 'crit' : (a.id === 'DCFC-03' ? 'warn' : 'ok')
+      if (ind) ind.userData.crit = crit
+      if (a.status !== st) {
+        a.status = st; a._faulted = crit
+        if (ind) { const c = st === 'crit' ? alertRed : st === 'warn' ? amber : green; ind.material.color.copy(c); ind.material.emissive.copy(c) }
+      }
     }
 
-    // flow line intensities + direction
+    // flow line intensities + direction — more of the network reacts, not just grid→tx
     const norm = (v, m) => clamp(Math.abs(v) / m, 0.15, 1)
     setFlow(flows.gridToTx, 1, 0.6 + norm(dat.peakDemand, 550) * 1.6, dat.gridLoad >= 85 ? 0xef4444 : 0x2f7bff)
-    setFlow(flows.txToBus, 1, 0.6 + norm(dat.peakDemand, 550) * 1.6)
+    setFlow(flows.txToBus, 1, 0.6 + norm(dat.peakDemand, 550) * 1.6, dat.gridLoad >= 90 ? 0xef4444 : 0x2563eb)
     setFlow(flows.solarToBus, 1, 0.4 + norm(dat.solar, 300) * 1.8, 0x10b981)
-    setFlow(flows.bessToBus, dat.bessPower < 0 ? 1 : -1, 0.4 + norm(dat.bessPower, 120) * 1.6, 0xf59e0b)
-    setFlow(flows.busToDcfc, 1, 0.5 + norm(dat.dcfcPower, 600) * 1.6)
+    setFlow(flows.bessToBus, dat.bessPower < 0 ? 1 : -1, 0.4 + norm(dat.bessPower, 120) * 1.6, dat.runaway >= 40 ? 0xef4444 : 0xf59e0b)
+    setFlow(flows.busToDcfc, 1, 0.5 + norm(dat.dcfcPower, 600) * 1.6, dat.faulted > 0 ? 0xef4444 : 0x2563eb)
     setFlow(flows.busToAc, 1, 0.5 + norm(dat.sessions, 24) * 1.2)
     setFlow(flows.busToBldg, 1, 0.7)
+
+    // site-wide crisis level (0..1) → drives the red alert light + fog in the render loop
+    alertLevel = clamp(Math.max(
+      dat.gridLoad >= 88 ? (dat.gridLoad - 88) / 14 : 0,
+      dat.runaway >= 40 ? (dat.runaway - 40) / 40 : 0,
+      dat.faulted > 0 ? Math.min(1, dat.faulted / 6) : 0), 0, 1)
 
     // if an inspector is open, refresh its metric values in place
     if (selected && !inspector.classList.contains('hidden')) {
@@ -553,7 +568,8 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
         const p = roadCurve.getPoint(d.t); const tan = roadCurve.getTangent(d.t)
         a.obj.position.set(p.x, 0.02, p.z); a.obj.rotation.y = Math.atan2(tan.x, tan.z)
       } else if (a.kind === 'led') {
-        a.obj.material.emissiveIntensity = 1.2 + Math.sin(t * 4 + a.obj.position.x) * 0.7
+        const cr = a.obj.userData && a.obj.userData.crit
+        a.obj.material.emissiveIntensity = (cr ? 2.8 : 1.2) + Math.sin(t * (cr ? 10 : 4) + a.obj.position.x) * (cr ? 1.4 : 0.7)
       } else if (a.kind === 'cable') {
         a.obj.material.emissiveIntensity = 0.7 + Math.abs(Math.sin(t * 3)) * 1.2
       } else if (a.kind === 'flow') {
@@ -563,6 +579,10 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       }
     }
     // gentle BESS label + module shimmer already handled in update()
+
+    // site-wide red alert — light + atmosphere react to the crisis level
+    alertLight.intensity = alertLevel * (2.6 + Math.sin(t * 7) * 1.6)
+    { const al = alertLevel * 0.82; scene.fog.color.setRGB(0.071 + 0.30 * al, 0.125 - 0.085 * al, 0.263 - 0.195 * al) }
 
     // project world labels to screen
     for (const rec of labels) {
