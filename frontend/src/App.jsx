@@ -44,7 +44,7 @@ const DOMAINS = [
   { id: 'defence', name: 'Defence', engine: 'defence', desc: 'Readiness & response', icon: 'warroom', color: '#6d28d9' },
   { id: 'aerospace', name: 'Aerospace', engine: 'aerospace', desc: 'Fleet & AOG', icon: 'reports', color: '#2563eb' },
 ]
-const EV_NAV_IDS = ['simulate', 'network', 'data', 'records']
+const EV_NAV_IDS = ['simulate', 'data', 'records']
 const GENERIC_NAV_IDS = ['dashboard', 'warroom', 'library', 'builder', 'simulation', 'decision', 'training', 'twin', 'reports', 'assumptions']
 
 function DomainChooser({ onPick }) {

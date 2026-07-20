@@ -474,6 +474,17 @@ body { background: var(--bg); }
 .mc-cond { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); color: #cdd5f0; border-radius: 999px; padding: 5px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .12s; }
 .mc-cond:hover { border-color: rgba(251,191,36,.6); }
 .mc-cond.on { background: rgba(251,191,36,.18); border-color: #fbbf24; color: #ffe6a8; }
+/* 3-square collapsible tiles (strategies / repair / network) */
+.mc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+.mc-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 15px 17px; cursor: pointer; color: #e7eaff; font-family: inherit; text-align: left; transition: all .15s; }
+.mc-tile:hover { border-color: rgba(124,58,237,.55); transform: translateY(-2px); }
+.mc-tile.on { border-color: var(--accent); background: rgba(124,58,237,.16); }
+.mc-tile-ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: rgba(124,58,237,.2); border: 1px solid rgba(124,58,237,.35); margin-bottom: 7px; }
+.mc-tile-t { font-size: 14.5px; font-weight: 800; }
+.mc-tile-s { font-size: 11.5px; color: #9fb0d8; }
+.mc-tile-body { margin-top: 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 14px; }
+.mc-strat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.mc-strat-grid .mc-strat { margin-top: 0; }
 /* print report */
 .report-print { display: none; }
 @media print {

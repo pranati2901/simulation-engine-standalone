@@ -35,6 +35,7 @@ export default function MissionControl() {
   const [netOpen, setNetOpen] = useState(false)
   const [recSaved, setRecSaved] = useState(false)
   const [conds, setConds] = useState([])
+  const [openTab, setOpenTab] = useState(null)
   const [horizon, setHorizon] = useState('now')
   const [siteId, setSiteId] = useState(() => SITES.find(s => MODEL.site.startsWith(s.name))?.id || SITES[0].id)
   const selRef = useRef(null)
@@ -64,7 +65,7 @@ export default function MissionControl() {
     setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true)
     // fault-specific Monte Carlo (120 replays, distribution shaped by the fault)
     const info = buildMonteCarlo(assetId, faultId); setMc(info)
-    const facts = { ...st.doNothing.scn.facts, monte_carlo: { runs: info.runs, contained_pct: info.contained_pct, certified_pct: info.certified_pct } }
+    const facts = { ...st.doNothing.scn.facts, monte_carlo: { runs: info.runs, contained_pct: info.contained_pct } }
     groundedAnswer({ facts }, q)
   }
 
@@ -119,6 +120,8 @@ export default function MissionControl() {
     loadNetwork(siteToNetwork(s)); setSiteId(id)
     if (selRef.current) runFault(selRef.current.assetId, selRef.current.faultId)   // re-run on the new site
   }
+
+  const toggleTab = (t) => setOpenTab(o => (o === t ? null : t))
 
   const toggleCond = (id) => {
     const n = conds.includes(id) ? conds.filter(x => x !== id) : [...conds, id]
@@ -210,6 +213,21 @@ export default function MissionControl() {
     </div>
   )
 
+  const strategiesJsx = strategies ? (
+    <div className="mc-strat-grid">
+      {[...strategies.list].sort((a, b) => a.exposure - b.exposure).map(st => {
+        const sv = strategies.baseExposure - st.exposure
+        return (
+          <button key={st.key} className={`mc-strat ${activeKey === st.key ? 'active' : ''}`} onClick={() => pickStrategy(st)}>
+            <div className="mc-strat-h"><b>{st.name}</b>{st.key === strategies.bestKey && <span className="mc-best">BEST</span>}<span className="mc-strat-x">{inr(st.exposure)}</span></div>
+            <div className="mc-strat-bar"><div style={{ width: `${100 * st.exposure / strategies.worst}%` }} /></div>
+            <div className="mc-strat-m">{st.mech}{sv > 0 && <b style={{ color: '#34e2b0' }}> · saves {inr(sv)}</b>}</div>
+          </button>
+        )
+      })}
+    </div>
+  ) : null
+
   if (phase === 'home') return (
     <div className="mc mc-home">
       <div className="mc-brand">◆ SimCore</div>
@@ -256,6 +274,7 @@ export default function MissionControl() {
             <button key={k} className={horizon === k ? 'on' : ''} onClick={() => onHorizon(k)}>{v.label}</button>
           ))}
         </div>
+        {f && answer && <button className="mc-new" onClick={saveRecord}>{recSaved ? '✓ Saved' : '★ Save'}</button>}
         <button className="mc-new" onClick={() => { setPhase('home'); setPrompt('') }}>＋ New simulation</button>
       </div>
 
@@ -275,7 +294,7 @@ export default function MissionControl() {
           {strategies && activeStrat && (
             <div className={`mc-compare ${activeKey === 'nothing' ? 'bad' : 'good'}`}>
               {activeKey === 'nothing'
-                ? <>⚠ No action taken — full exposure <b>{inr(activeStrat.exposure)}</b>. Pick a strategy on the right to contain it.</>
+                ? <>⚠ No action taken — full exposure <b>{inr(activeStrat.exposure)}</b>. Open <b>Strategies</b> below to contain it.</>
                 : <>✓ <b>{activeStrat.name}</b> — exposure cut to <b>{inr(activeStrat.exposure)}</b>, saving <b>{inr(saved)}</b> ({Math.round(100 * saved / (strategies.baseExposure || 1))}% less than doing nothing).</>}
             </div>
           )}
@@ -300,23 +319,16 @@ export default function MissionControl() {
                 : <div><b>{f.peak_grid_load_pct}%</b><span>peak load</span></div>}
             </div>
           )}
-          {f && answer && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="mc-save" onClick={saveRecord}>{recSaved ? '✓ Saved' : '★ Save'}</button>
-              <button className="mc-save" onClick={() => window.print()}>📄 Report</button>
-            </div>
-          )}
-
           {mc && (
             <div className="mc-montecarlo">
-              <div className="mc-panel-t" style={{ marginTop: 16 }}>Monte Carlo — {mc.runs} engine runs ⚙</div>
+              <div className="mc-panel-t" style={{ marginTop: 16 }}>Monte Carlo — {mc.runs} runs ⚙</div>
               <div className="mc-mc-head">
-                <span><b style={{ color: '#34e2b0' }}>{mc.certified_pct}%</b> contained</span>
-                <span><b style={{ color: '#fb7185' }}>{100 - mc.certified_pct}%</b> cascades to blackout</span>
+                <span><b style={{ color: '#34e2b0' }}>{mc.contained_pct}%</b> contained</span>
+                <span><b style={{ color: '#fb7185' }}>{100 - mc.contained_pct}%</b> cascades</span>
               </div>
               <div className="mc-mc-bar">
-                <div style={{ width: `${mc.certified_pct}%`, background: '#34e2b0' }} />
-                <div style={{ width: `${100 - mc.certified_pct}%`, background: '#fb7185' }} />
+                <div style={{ width: `${mc.contained_pct}%`, background: '#34e2b0' }} />
+                <div style={{ width: `${100 - mc.contained_pct}%`, background: '#fb7185' }} />
               </div>
               {mc.samples?.length > 1 && (() => {
                 const bins = new Array(12).fill(0)
@@ -335,46 +347,32 @@ export default function MissionControl() {
             </div>
           )}
 
-          {strategies && (
-            <>
-              <div className="mc-panel-t" style={{ marginTop: 16 }}>Strategies — click to simulate</div>
-              {[...strategies.list].sort((a, b) => a.exposure - b.exposure).map(st => {
-                const saved = strategies.baseExposure - st.exposure
-                return (
-                  <button key={st.key} className={`mc-strat ${activeKey === st.key ? 'active' : ''}`} onClick={() => pickStrategy(st)}>
-                    <div className="mc-strat-h">
-                      <b>{st.name}</b>
-                      {st.key === strategies.bestKey && <span className="mc-best">BEST</span>}
-                      <span className="mc-strat-x">{inr(st.exposure)}</span>
-                    </div>
-                    <div className="mc-strat-bar"><div style={{ width: `${100 * st.exposure / strategies.worst}%` }} /></div>
-                    <div className="mc-strat-m">{st.mech}{saved > 0 && <b style={{ color: '#34e2b0' }}> · saves {inr(saved)}</b>}</div>
-                  </button>
-                )
-              })}
-            </>
-          )}
         </aside>
       </div>
 
       {scenario && (
-        <div className="mc-repair">
-          <button className="mc-repair-toggle" onClick={() => setRepairOpen(o => !o)}>
-            <span>🔧 Guided repair — fix this fault step by step</span>
-            <span>{repairOpen ? '▲ hide' : '▼ open'}</span>
-          </button>
-          {repairOpen && drillScenario && <div className="mc-repair-body"><GuidedDrill key={drillScenario.id} scenario={drillScenario} /></div>}
-        </div>
-      )}
-
-      {scenario && (
-        <div className="mc-repair">
-          <button className="mc-repair-toggle" onClick={() => setNetOpen(o => !o)}>
-            <span>🗺 Network — all {SITES.length} sites (switch &amp; compare exposure)</span>
-            <span>{netOpen ? '▲ hide' : '▼ open'}</span>
-          </button>
-          {netOpen && <div className="mc-repair-body">{netPanelJsx}</div>}
-        </div>
+        <>
+          <div className="mc-tiles">
+            <button className={`mc-tile ${openTab === 'strategies' ? 'on' : ''}`} onClick={() => toggleTab('strategies')}>
+              <span className="mc-tile-ic">📊</span>
+              <span className="mc-tile-t">Strategies</span>
+              <span className="mc-tile-s">{strategies?.list.length || 0} options · pick a fix</span>
+            </button>
+            <button className={`mc-tile ${openTab === 'repair' ? 'on' : ''}`} onClick={() => toggleTab('repair')}>
+              <span className="mc-tile-ic">🔧</span>
+              <span className="mc-tile-t">Guided repair</span>
+              <span className="mc-tile-s">7-step fix, scored</span>
+            </button>
+            <button className={`mc-tile ${openTab === 'network' ? 'on' : ''}`} onClick={() => toggleTab('network')}>
+              <span className="mc-tile-ic">🗺</span>
+              <span className="mc-tile-t">Network</span>
+              <span className="mc-tile-s">{SITES.length} sites · switch &amp; compare</span>
+            </button>
+          </div>
+          {openTab === 'strategies' && <div className="mc-tile-body">{strategiesJsx}</div>}
+          {openTab === 'repair' && drillScenario && <div className="mc-tile-body"><GuidedDrill key={drillScenario.id} scenario={drillScenario} /></div>}
+          {openTab === 'network' && <div className="mc-tile-body">{netPanelJsx}</div>}
+        </>
       )}
 
       {f && (
