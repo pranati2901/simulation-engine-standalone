@@ -49,6 +49,70 @@ const SEQ = {
 }
 const getSeq = (a, f) => SEQ[`${a}:${f}`] || SEQ['TX-1:overload']
 
+// Fault-specific mitigation strategies. readiness = how much the response contains the fault
+// (drives exposure + how far the cascade spreads). Every set leads with a "do nothing" baseline.
+const STRATS = {
+  'TX-1:overload': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'No intervention — ride it out.' },
+    { key: 'shed', name: 'Shed non-critical DC load', readiness: 70, mech: 'Drop low-priority DC sessions to hold TX-1 under 90%.' },
+    { key: 'bess', name: 'Dispatch BESS', readiness: 84, mech: 'Discharge BESS-A to cover peak and protect the transformer.' },
+    { key: 'curtail', name: 'Curtail charging 50%', readiness: 62, mech: 'Halve DC-fast power site-wide during the peak window.' },
+  ],
+  'TX-1:overheat': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Let the transformer keep heating.' },
+    { key: 'cool', name: 'Force-cool + throttle', readiness: 78, mech: 'Run forced cooling and throttle DC power before it derates.' },
+    { key: 'shift', name: 'Shift load to Feeder F-2', readiness: 60, mech: 'Move DC-bank load onto Feeder F-2 headroom.' },
+  ],
+  'F-1:overcurrent_trip': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Leave the feeder tripped.' },
+    { key: 'reclose', name: 'Re-close after load-shed', readiness: 72, mech: 'Shed load, then re-close Feeder F-1.' },
+    { key: 'rebal', name: 'Rebalance to F-2', readiness: 80, mech: 'Move the DC bank onto Feeder F-2 and restore charging.' },
+  ],
+  'F-2:overcurrent_trip': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Leave the feeder tripped.' },
+    { key: 'shift', name: 'Shift AC bays to F-1', readiness: 74, mech: 'Move AC bays onto Feeder F-1 headroom and re-close.' },
+    { key: 'stagger', name: 'Stagger AC charging', readiness: 60, mech: 'Sequence AC sessions to stay under the feeder limit.' },
+  ],
+  'DCFC:charger_offline': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Leave the chargers offline.' },
+    { key: 'reboot', name: 'Remote-reboot OCPP', readiness: 82, mech: 'Restart the OCPP session controller remotely.' },
+    { key: 'reroute', name: 'Reroute drivers', readiness: 66, mech: 'Send arriving drivers to the working bays.' },
+    { key: 'truck', name: 'Dispatch truck-roll', readiness: 55, mech: 'Send a technician if the reboot fails.' },
+  ],
+  'DCFC:connector_fault': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Leave the connector faulted.' },
+    { key: 'lock', name: 'Lock + reroute', readiness: 84, mech: 'Lock the faulted connector, route the driver to the next bay.' },
+    { key: 'reset', name: 'Remote diagnostic reset', readiness: 68, mech: 'Attempt a remote reset of the connector.' },
+  ],
+  'BESS-A:thermal_runaway': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Let the pack keep heating — fire risk.' },
+    { key: 'isolate', name: 'Isolate + cool pack', readiness: 86, mech: 'Isolate BESS-A and trigger the cooling/suppression system.' },
+    { key: 'gridcov', name: 'Cover load from grid', readiness: 62, mech: 'Carry load from grid within the demand-charge cap while isolating.' },
+  ],
+  'BESS-A:offline': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Run without storage support.' },
+    { key: 'hold', name: 'Hold peak on grid', readiness: 74, mech: 'Carry peak on grid within demand-charge headroom until BESS is back.' },
+    { key: 'backup', name: 'Bring backup online', readiness: 80, mech: 'Start backup storage/genset to restore support.' },
+  ],
+  'GRID:brownout': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Ride the brownout unmanaged.' },
+    { key: 'ride', name: 'Ride through on BESS + solar', readiness: 82, mech: 'Support the site from BESS-A and the solar canopy.' },
+    { key: 'curtail', name: 'Curtail DC-fast', readiness: 66, mech: 'Cut DC-fast power to protect the site during the sag.' },
+  ],
+  'GRID:supply_loss': [
+    { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'Full outage — no backup.' },
+    { key: 'island', name: 'Island on BESS + solar', readiness: 80, mech: 'Disconnect and run the site islanded on BESS-A + solar.' },
+    { key: 'priority', name: 'Prioritise AC bays', readiness: 60, mech: 'Keep AC bays up, shed DC-fast, sequence restart on return.' },
+  ],
+}
+const DEFAULT_STRATS = [
+  { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'No intervention — ride it out.' },
+  { key: 'bess', name: 'Activate BESS', readiness: 80, mech: 'Dispatch on-site storage to cover load.' },
+  { key: 'reroute', name: 'Reroute demand', readiness: 58, mech: 'Send arriving EVs elsewhere to cut demand.' },
+  { key: 'curtail', name: 'Curtail charging', readiness: 66, mech: 'Throttle charging power to contain the fault.' },
+]
+export const strategiesFor = (assetId, faultId) => STRATS[`${assetId}:${faultId}`] || DEFAULT_STRATS
+
 const DUR = 90
 function envAt(t, onset, peak, recStart) {
   if (t <= 0) return 0

@@ -3,7 +3,7 @@ import EVWorld from '../components/EVWorld.jsx'
 import GuidedDrill from '../components/GuidedDrill.jsx'
 import { api } from '../api.js'
 import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor } from '../ev/networkModel.js'
-import { HEALTHY, HORIZONS, buildScenario, inr } from '../ev/scenarios.js'
+import { HEALTHY, HORIZONS, buildScenario, inr, strategiesFor } from '../ev/scenarios.js'
 
 const SUGGESTIONS = [
   'What happens if Transformer T1 trips at 5PM?',
@@ -15,12 +15,6 @@ const SUGGESTIONS = [
 const REASONING = [
   'Reading digital twin…', 'Resolving assets & dependencies…', 'Building simulation graph…',
   'Running Monte Carlo…', 'Testing mitigation strategies…', 'Ranking optimal decisions…', 'Rendering future…',
-]
-const STRATEGIES = [
-  { key: 'nothing', name: 'Do nothing', readiness: 5, mech: 'No intervention — ride it out.' },
-  { key: 'bess', name: 'Activate BESS', readiness: 80, mech: 'Dispatch BESS-A to hold the transformer and cover load.' },
-  { key: 'reroute', name: 'Reroute fleet', readiness: 58, mech: 'Send arriving EVs to nearby stations to cut demand.' },
-  { key: 'pricing', name: 'Dynamic pricing', readiness: 68, mech: 'Raise peak price to shift charging off-peak.' },
 ]
 const fallback = (f) => `${f.asset} — ${f.fault}: ~${f.chargers_down} chargers across ${f.stations_affected} station(s) drop, ${f.kwh_curtailed} kWh curtailed. Exposure ${inr(f.total_exposure_inr)} (${f.preventable_pct}% preventable). ${f.recommended_action}`
 
@@ -47,7 +41,7 @@ export default function MissionControl() {
   }
 
   const buildStrats = (assetId, faultId, hz) => {
-    const list = STRATEGIES.map(s => {
+    const list = strategiesFor(assetId, faultId).map(s => {
       const scn = buildScenario(assetId, faultId, { readiness: s.readiness, horizon: hz })
       return { ...s, scn, exposure: scn.facts.total_exposure_inr }
     })
