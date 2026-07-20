@@ -166,6 +166,26 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
 
   const animators = []   // {kind, obj, ...}
   let alertLevel = 0     // 0..1 site-wide crisis → red alert light + fog
+
+  // spark particles — a burst fires at each cascade stage
+  const SPN = 160
+  const spPos = new Float32Array(SPN * 3).fill(-999)
+  const spVel = new Float32Array(SPN * 3)
+  const spLife = new Float32Array(SPN)
+  const spGeo = new THREE.BufferGeometry(); spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3))
+  const spMat = new THREE.PointsMaterial({ color: 0xffb020, size: 0.6, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })
+  const sparks = new THREE.Points(spGeo, spMat); sparks.frustumCulled = false; scene.add(sparks)
+  let spHead = 0
+  function emitSparks(p, n = 30, spread = 1.6) {
+    if (!p) return
+    for (let k = 0; k < n; k++) {
+      const i = (spHead++) % SPN
+      spPos[i * 3] = p.x; spPos[i * 3 + 1] = p.y; spPos[i * 3 + 2] = p.z
+      spVel[i * 3] = (Math.random() - 0.5) * spread; spVel[i * 3 + 1] = Math.random() * 2.4 + 1.2; spVel[i * 3 + 2] = (Math.random() - 0.5) * spread
+      spLife[i] = 1
+    }
+    spGeo.attributes.position.needsUpdate = true
+  }
   const selectable = []  // clickable asset groups
   const labels = []      // world-anchored HTML callouts {el, pos}
   const flows = {}       // named flow lines
@@ -494,9 +514,11 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
     for (const [n, rec] of stageEls) { if (!want.has(n)) { rec.el.remove(); stageEls.delete(n) } }
     for (const s of stages) {
       if (!stageEls.has(s.n)) {
+        const anchor = stageAnchors[s.anchor] || stageAnchors.transformer
         const b = el('div', { class: 'evw-step' }, el('span', { class: 'n' }, String(s.n)), el('span', { class: 't' }, s.label))
         host.append(b)
-        stageEls.set(s.n, { el: b, anchor: stageAnchors[s.anchor] || stageAnchors.transformer })
+        stageEls.set(s.n, { el: b, anchor })
+        emitSparks(anchor); focusTarget = anchor   // spark burst + camera follows each bubble
       } else { stageEls.get(s.n).anchor = stageAnchors[s.anchor] || stageEls.get(s.n).anchor }
     }
     const g = (k, d) => (live[k] == null ? d : live[k])
@@ -617,6 +639,18 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
     alertLight.intensity = alertLevel * (2.6 + Math.sin(t * 7) * 1.6)
     { const al = alertLevel * 0.82; scene.fog.color.setRGB(0.071 + 0.30 * al, 0.125 - 0.085 * al, 0.263 - 0.195 * al) }
 
+    // spark particles — rise, slow under gravity, fade out
+    for (let i = 0; i < SPN; i++) {
+      if (spLife[i] > 0) {
+        spLife[i] -= dt * 1.4
+        spPos[i * 3] += spVel[i * 3] * dt * 7
+        spPos[i * 3 + 1] += (spVel[i * 3 + 1] - 5 * (1 - spLife[i])) * dt * 7
+        spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt * 7
+        if (spLife[i] <= 0) spPos[i * 3 + 1] = -999
+      }
+    }
+    spGeo.attributes.position.needsUpdate = true
+
     // project world labels to screen
     for (const rec of labels) {
       _v.copy(rec.anchor).project(camera)
@@ -646,12 +680,13 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
 
   function onResize() { camera.aspect = W() / H(); camera.updateProjectionMatrix(); renderer.setSize(W(), H()); if (composer) composer.setSize(W(), H()) }
   window.addEventListener('resize', onResize)
+  const ro = new ResizeObserver(() => onResize()); ro.observe(host)   // shrink canvas to its column
 
   return {
     update, focusAsset,
     dispose() {
       cancelAnimationFrame(raf)
-      window.removeEventListener('resize', onResize)
+      window.removeEventListener('resize', onResize); ro.disconnect()
       renderer.domElement.removeEventListener('pointermove', onMove)
       pmrem.dispose(); renderer.dispose()
       scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose && m.dispose()) })

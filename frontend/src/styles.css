@@ -376,14 +376,15 @@ body { background: var(--bg); }
 .mc-think-row.active { color: #e7eaff; } .mc-think-row.active .dot { background: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,.25); }
 .mc-think-row.done { color: #9fb0d8; } .mc-think-row.done .dot { background: #34e2b0; }
 .mc-live { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-.mc-top { display: flex; align-items: center; gap: 16px; }
-.mc-q { flex: 1; color: #cdd5f0; font-size: 14px; }
+.mc-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mc-q { flex: 1; min-width: 0; color: #cdd5f0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mc-new { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #cdd5f0; border-radius: 10px; padding: 7px 13px; cursor: pointer; font-family: inherit; font-weight: 600; }
 .mc-time { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 999px; padding: 4px 6px 4px 12px; }
 .mc-time > span { font-size: 11px; color: #9fb0d8; margin-right: 4px; white-space: nowrap; }
 .mc-time button { background: transparent; border: 0; color: #cdd5f0; font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; cursor: pointer; font-family: inherit; }
 .mc-time button.on { background: linear-gradient(135deg,#7c3aed,#2563eb); color: #fff; }
-.mc-body { display: grid; grid-template-columns: 190px 1fr 330px; gap: 12px; align-items: start; }
+.mc-body { display: grid; grid-template-columns: 180px minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+.mc-left, .mc-center, .mc-right { min-width: 0; }
 .mc-left, .mc-right { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 14px; padding: 12px 13px; }
 .mc-panel-t { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: #7a86ad; font-weight: 700; margin-bottom: 10px; }
 .mc-asset { font-size: 12.5px; color: #cdd5f0; padding: 7px 9px; border-radius: 8px; cursor: pointer; }
