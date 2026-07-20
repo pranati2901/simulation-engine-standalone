@@ -127,7 +127,7 @@ export default function MissionControl() {
   const seek = (t) => { setPlaying(false); setIdx(Math.round((t / scenario.duration) * (scenario.steps.length - 1))) }
   const crisis = cur ? Math.max(0, Math.min(1, Math.max((cur.live['ev:gridLoad'] - 88) / 14, (cur.live['ev:thermalRunawayRisk'] - 40) / 40, cur.metrics.faulted > 0 ? 0.55 : 0))) : 0
   const narr = scenario ? scenario.narration.filter(n => n.t <= (cur?.t ?? 0)) : []
-  const stages = scenario ? scenario.sequence.map((s, i) => ({ ...s, n: i + 1 })).filter(s => s.at * scenario.duration <= (cur?.t ?? 0)) : []
+  const stages = scenario ? scenario.sequence.slice(0, scenario.stagesFired).map((s, i) => ({ ...s, n: i + 1 })).filter(s => s.at * scenario.duration <= (cur?.t ?? 0)) : []
   const SCENE_ID = { 'TX-1': 'TX-1', 'BESS-A': 'BESS-A', 'DCFC': 'DCFC-01', 'F-1': 'EMS-1', 'F-2': 'EMS-1', 'GRID': 'TX-1' }
   const focusId = f ? (SCENE_ID[f.assetId] || 'TX-1') : null
   const activeStrat = strategies?.list.find(s => s.key === activeKey)

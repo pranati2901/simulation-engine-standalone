@@ -65,6 +65,9 @@ export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now
   const dem = h.demand
   const preventable = spec.preventable * h.degrade   // aged infra is harder to contain
   const contain = readiness / 100
+  const seq = getSeq(assetId, faultId)
+  // a prepared response contains the cascade earlier → fewer stages actually fire
+  const stagesFired = readiness >= 85 ? 1 : readiness >= 65 ? 2 : readiness >= 42 ? Math.max(2, seq.length - 1) : seq.length
   // Visuals barely dampen with readiness (the fault still visibly happens); the OUTCOME
   // ($, chargers down, recovery speed) is what a prepared response actually reduces.
   const visDamp = 1 - preventable * contain * 0.3
@@ -137,7 +140,7 @@ export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now
     preventable_pct: Math.round(preventable * 100), response_readiness_pct: readiness,
     recommended_action: spec.rec, tariff_inr_per_kwh: cost.rev_inr_per_kwh, sla_penalty_inr_per_hour: cost.penalty_inr_per_hour_down,
   }
-  return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, sequence: getSeq(assetId, faultId), duration: DUR }
+  return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, sequence: seq, stagesFired, duration: DUR }
 }
 
 export function inr(v) {

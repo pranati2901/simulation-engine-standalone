@@ -440,6 +440,22 @@ body { background: var(--bg); }
 .evw-legend i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
 .inspector { position: absolute; top: 60px; right: 14px; width: 300px; max-height: calc(100% - 96px); overflow: auto; z-index: 8; background: rgba(11,13,30,.94); backdrop-filter: blur(14px); border: 1px solid rgba(124,58,237,.5); border-radius: 16px; color: #e7eaff; box-shadow: 0 24px 60px rgba(0,0,0,.5); pointer-events: auto; padding: 14px 16px; }
 .inspector.hidden { display: none; }
+.inspector { padding: 0; }
+.insp-head { padding: 13px 14px 11px; border-bottom: 1px solid rgba(124,58,237,.25); display: flex; align-items: flex-start; gap: 10px; }
+.insp-ic { width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: rgba(124,58,237,.22); color: #c4b5fd; flex-shrink: 0; }
+.insp-title { font-family: var(--display); font-weight: 700; font-size: 14.5px; }
+.insp-sub { font-size: 10.5px; color: #9aa3d6; margin-top: 2px; font-family: var(--mono); }
+.insp-close { margin-left: auto; cursor: pointer; color: #cdd3ec; font-size: 17px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; }
+.insp-close:hover { background: rgba(255,255,255,.12); color: #fff; }
+.insp-body { padding: 13px 14px; }
+.insp-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.insp-metric { background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.22); border-radius: 10px; padding: 8px 10px; }
+.insp-metric .ml { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #9aa3d6; }
+.insp-metric .mv { font-family: var(--display); font-size: 16px; font-weight: 700; margin-top: 3px; color: #fff; }
+.insp-btn { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 7px; background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.4); color: #e7eaff; border-radius: 10px; padding: 9px; cursor: pointer; font-weight: 600; }
+.insp-btn.primary { background: linear-gradient(135deg,#7c3aed,#2563eb); border-color: transparent; color: #fff; }
+.insp-ai { margin-top: 8px; font-size: 12px; line-height: 1.6; color: #cdd3ec; background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.25); border-radius: 10px; padding: 10px 12px; }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.25); border-top-color: #c4b5fd; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
 
 /* data layer connectors */
 .conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }

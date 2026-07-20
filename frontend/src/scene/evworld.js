@@ -456,7 +456,9 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
     const p = new THREE.Vector3(); g.getWorldPosition(p); focusTarget = p
   }
   renderer.domElement.addEventListener('pointerdown', ev => {
-    const g = pickAt(ev.clientX, ev.clientY); if (g) selectAsset(g)
+    const g = pickAt(ev.clientX, ev.clientY)
+    if (g) selectAsset(g)
+    else { inspector.classList.add('hidden'); clearSel() }   // click empty space → close
   })
   function onMove(ev) {
     const g = pickAt(ev.clientX, ev.clientY)
