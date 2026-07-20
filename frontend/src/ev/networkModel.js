@@ -2,7 +2,7 @@
 // resolves), their topology, the tariff/SLA cost basis, and which faults each asset can have.
 // This is the "data layer" a real operator export would populate; here it's the demo network.
 
-export const MODEL = {
+const DEFAULT_MODEL = {
   site: 'Gaadin Energy Site',
   currency: 'INR',
   cost: { rev_inr_per_kwh: 18, penalty_inr_per_hour_down: 1200, demand_charge_inr_per_kw: 350 },
@@ -15,6 +15,28 @@ export const MODEL = {
     { id: 'GRID',   name: 'Grid supply (PCC)',         type: 'grid',         faults: ['brownout', 'supply_loss'] },
   ],
 }
+
+// MODEL is a live, swappable copy — the Data Layer can replace it with a company's real network.
+export const MODEL = JSON.parse(JSON.stringify(DEFAULT_MODEL))
+try { const saved = JSON.parse(localStorage.getItem('simcore_network') || 'null'); if (saved && saved.assets) Object.assign(MODEL, saved) } catch { /* ignore */ }
+
+export function loadNetwork(net) {
+  const clean = {
+    site: net.site || MODEL.site,
+    currency: net.currency || MODEL.currency,
+    cost: { ...DEFAULT_MODEL.cost, ...(net.cost || {}) },
+    assets: Array.isArray(net.assets) && net.assets.length ? net.assets : MODEL.assets,
+  }
+  Object.assign(MODEL, clean)
+  localStorage.setItem('simcore_network', JSON.stringify(clean))
+  return MODEL
+}
+export function resetNetwork() {
+  Object.assign(MODEL, JSON.parse(JSON.stringify(DEFAULT_MODEL)))
+  localStorage.removeItem('simcore_network')
+  return MODEL
+}
+export const isDefaultNetwork = () => MODEL.site === DEFAULT_MODEL.site && MODEL.assets.length === DEFAULT_MODEL.assets.length
 
 export const FAULTS = {
   overload:         { label: 'Overload trip at peak' },

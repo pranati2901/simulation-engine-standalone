@@ -438,6 +438,12 @@ body { background: var(--bg); }
 .inspector { position: absolute; top: 60px; right: 14px; width: 300px; max-height: calc(100% - 96px); overflow: auto; z-index: 8; background: rgba(11,13,30,.94); backdrop-filter: blur(14px); border: 1px solid rgba(124,58,237,.5); border-radius: 16px; color: #e7eaff; box-shadow: 0 24px 60px rgba(0,0,0,.5); pointer-events: auto; padding: 14px 16px; }
 .inspector.hidden { display: none; }
 
+/* data layer connectors */
+.conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.conn-card { border: 1px solid var(--border); border-radius: 13px; padding: 13px 14px; background: var(--surface); }
+.conn-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.conn-p { font-size: 12px; color: var(--muted); line-height: 1.45; min-height: 34px; }
+
 /* dashboard preventable callout */
 .prevent-card { background: var(--gradient); color: #fff; border: 0; }
 .pc-k { font-family: var(--display); font-size: 34px; font-weight: 800; line-height: 1; letter-spacing: -.5px; }
