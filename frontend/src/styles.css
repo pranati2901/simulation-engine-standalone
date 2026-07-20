@@ -446,6 +446,7 @@ body { background: var(--bg); }
 .dc-ic { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: color-mix(in srgb, var(--dc) 22%, transparent); color: var(--dc); margin-bottom: 4px; }
 .dc-card b { font-size: 15px; }
 .dc-desc { font-size: 11px; color: #9fb0d8; line-height: 1.4; }
+.dc-note { font-size: 11.5px; font-weight: 800; color: #c4b5fd; letter-spacing: .3px; }
 .dc-tag { font-size: 9.5px; font-weight: 700; color: #34e2b0; margin-top: 4px; }
 .dc-tag.muted { color: #7a86ad; }
 /* sidebar domain switcher */

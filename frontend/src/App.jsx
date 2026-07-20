@@ -38,7 +38,7 @@ const NAV = [
 
 // Domain landing — EV is fully built; the others reuse the generic tabs until configured.
 const DOMAINS = [
-  { id: 'ev', name: 'EV Charging', engine: 'ev', desc: 'Charging networks, energy & fleet', icon: 'simulation', color: '#7c3aed', ready: true },
+  { id: 'ev', name: 'EV Charging', engine: 'ev', desc: 'Charging networks, energy & fleet', note: 'gaadin.ai', icon: 'simulation', color: '#7c3aed', ready: true },
   { id: 'healthcare', name: 'Healthcare', engine: 'hospital', desc: 'Hospitals, OR & capacity', icon: 'twin', color: '#0891b2' },
   { id: 'railway', name: 'Railway', engine: 'railway', desc: 'Rail operations & delays', icon: 'dashboard', color: '#059669' },
   { id: 'defence', name: 'Defence', engine: 'defence', desc: 'Readiness & response', icon: 'warroom', color: '#6d28d9' },
@@ -59,6 +59,7 @@ function DomainChooser({ onPick }) {
             <span className="dc-ic"><Icon name={d.icon} size={26} /></span>
             <b>{d.name}</b>
             <span className="dc-desc">{d.desc}</span>
+            {d.note && <span className="dc-note">{d.note}</span>}
             <span className={`dc-tag ${d.ready ? '' : 'muted'}`}>{d.ready ? '● Ready' : 'Configure later'}</span>
           </button>
         ))}
@@ -86,6 +87,7 @@ export default function App() {
   const navItems = ids.map(id => NAV.find(n => n.id === id)).filter(Boolean)
   const home = appDomain === 'ev' ? '/simulate' : '/dashboard'
   const active = navItems.find(n => loc.pathname.startsWith(n.to)) || navItems[0]
+  const allowed = loc.pathname === '/' || navItems.some(n => loc.pathname.startsWith(n.to))
 
   return (
     <div data-mode={active.id} className={`app ${collapsed ? 'nav-collapsed' : ''}`}>
@@ -119,6 +121,7 @@ export default function App() {
         <main className={`page ${active.id === 'simulate' ? 'page-wide' : ''}`}>
           {engineUp === false
             ? <div className="card"><div className="empty">Can’t reach the engine on <span className="mono">:8002</span>. Start it, then reload.</div></div>
+            : !allowed ? <Navigate to={home} replace />
             : (
               <Routes>
                 <Route path="/" element={<Navigate to={home} replace />} />
