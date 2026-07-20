@@ -476,7 +476,7 @@ body { background: var(--bg); }
 .mc-cond:hover { border-color: rgba(251,191,36,.6); }
 .mc-cond.on { background: rgba(251,191,36,.18); border-color: #fbbf24; color: #ffe6a8; }
 /* 3-square collapsible tiles (strategies / repair / network) */
-.mc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin-top: 14px; }
+.mc-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
 .mc-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 15px 17px; cursor: pointer; color: #e7eaff; font-family: inherit; text-align: left; transition: all .15s; }
 .mc-tile:hover { border-color: rgba(124,58,237,.55); transform: translateY(-2px); }
 .mc-tile.on { border-color: var(--accent); background: rgba(124,58,237,.16); }

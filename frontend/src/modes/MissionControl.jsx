@@ -87,7 +87,7 @@ export default function MissionControl() {
 
   const submit = (text) => {
     const q = (text ?? prompt).trim(); if (!q) return
-    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null)
+    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null); setOpenTab(null)
     let resolved = resolveText(q) || { assetId: 'TX-1', faultId: 'overload' }
     const planP = api.plan(q, MODEL.assets.map(a => ({ id: a.id, name: a.name, faults: a.faults })))
       .then(p => {
@@ -108,7 +108,7 @@ export default function MissionControl() {
     const a = assetById(assetId)
     const flabel = faultsFor(assetId).find(x => x.id === faultId)?.label || faultId
     const q = `What happens if ${a?.name || assetId} has a ${flabel.toLowerCase()}?`
-    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null)
+    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null); setOpenTab(null)
     let s = 0
     const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(assetId, faultId, q) } }, 430)
   }
@@ -154,7 +154,7 @@ export default function MissionControl() {
     if (multiSel.length < 2) return
     const primary = multiSel[0]
     setPrompt(`${multiSel.length} concurrent faults`); setPhase('thinking'); setReasonStep(0)
-    setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null)
+    setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null); setOpenTab(null)
     const miP = api.evMultifault(multiSel.map(m => ({ assetId: m.assetId, faultId: m.faultId })), conds).then(r => { setMultiInfo(r); return r }).catch(() => null)
     let s = 0
     const iv = setInterval(async () => {
