@@ -416,6 +416,10 @@ body { background: var(--bg); }
 .mc-compare { margin-top: 10px; padding: 9px 14px; border-radius: 11px; font-size: 12.5px; font-weight: 600; line-height: 1.4; }
 .mc-compare.good { background: rgba(52,226,176,.14); border: 1px solid rgba(52,226,176,.4); color: #7ff0cf; }
 .mc-compare.bad { background: rgba(251,113,133,.12); border: 1px solid rgba(251,113,133,.35); color: #ffc1cb; }
+.mc-repair-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); color: #e7eaff; border-radius: 12px; padding: 12px 16px; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13.5px; }
+.mc-repair-toggle:hover { border-color: rgba(124,58,237,.6); }
+.mc-repair-toggle > span:last-child { color: #9fb0d8; font-size: 12px; }
+.mc-repair-body { margin-top: 12px; }
 .mc-stage { position: relative; border-radius: 16px; overflow: hidden; }
 .mc-vignette { position: absolute; inset: 0; pointer-events: none; border-radius: 16px; box-shadow: inset 0 0 130px 34px rgba(255,26,46,.6); transition: opacity .35s; z-index: 7; }
 .mc-narrate { position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 9; background: rgba(10,14,26,.74); backdrop-filter: blur(9px); border: 1px solid rgba(255,80,100,.4); border-radius: 12px; padding: 9px 14px; color: #ffe1e6; font-size: 13px; font-family: var(--mono); box-shadow: 0 10px 30px rgba(0,0,0,.4); }

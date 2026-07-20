@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import EVWorld from '../components/EVWorld.jsx'
+import GuidedDrill from '../components/GuidedDrill.jsx'
 import { api } from '../api.js'
 import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor } from '../ev/networkModel.js'
 import { HEALTHY, HORIZONS, buildScenario, inr } from '../ev/scenarios.js'
@@ -34,6 +35,7 @@ export default function MissionControl() {
   const [playing, setPlaying] = useState(false)
   const [answer, setAnswer] = useState(null)
   const [mc, setMc] = useState(null)
+  const [repairOpen, setRepairOpen] = useState(false)
   const [horizon, setHorizon] = useState('now')
   const selRef = useRef(null)
   const scenarioRef = useRef(null); scenarioRef.current = scenario
@@ -132,6 +134,7 @@ export default function MissionControl() {
   const focusId = f ? (SCENE_ID[f.assetId] || 'TX-1') : null
   const activeStrat = strategies?.list.find(s => s.key === activeKey)
   const saved = strategies && activeStrat ? strategies.baseExposure - activeStrat.exposure : 0
+  const drillScenario = f ? { id: `${f.assetId}:${f.fault}`, name: `${f.fault} — ${f.asset}`, recommended_environment: { actors: [{ name: f.asset }] } } : null
 
   if (phase === 'home') return (
     <div className="mc mc-home">
@@ -240,6 +243,16 @@ export default function MissionControl() {
           )}
         </aside>
       </div>
+
+      {scenario && (
+        <div className="mc-repair">
+          <button className="mc-repair-toggle" onClick={() => setRepairOpen(o => !o)}>
+            <span>🔧 Guided repair — fix this fault step by step</span>
+            <span>{repairOpen ? '▲ hide' : '▼ open'}</span>
+          </button>
+          {repairOpen && drillScenario && <div className="mc-repair-body"><GuidedDrill key={drillScenario.id} scenario={drillScenario} /></div>}
+        </div>
+      )}
     </div>
   )
 }
