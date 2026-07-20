@@ -280,7 +280,7 @@ export default function MissionControl() {
     <div className="mc-muted"><span className="spin" /> searching response combinations for the optimum…</div>
   ) : optResult ? (
     <div className="mc-opt">
-      <div className="mc-opt-note">Searched <b>{optResult.evaluations}</b> lever combinations to minimise <b>total cost</b> (residual damage + cost of responding). The optimum saves <b style={{ color: '#34e2b0' }}>{inr(optResult.savings)}</b> vs doing nothing.</div>
+      <div className="mc-opt-note">Searched <b>{optResult.evaluations}</b> response combinations to minimise <b>total cost</b> (damage + cost of responding). Saves <b style={{ color: '#34e2b0' }}>{inr(optResult.savings)}</b> vs doing nothing{optResult.vs_single > 0 ? <> — and <b style={{ color: '#34e2b0' }}>{inr(optResult.vs_single)}</b> more than the best single action.</> : '.'}</div>
       <div className="mc-opt-levers">
         {optResult.levers.map(l => (
           <div key={l.id} className="mc-opt-lever">

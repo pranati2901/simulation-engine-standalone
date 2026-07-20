@@ -28,13 +28,66 @@ SPEC = {
 }
 DEFAULT = {"prev": 0.5, "kw": 300, "stations": 1}
 
-# response levers: containment weight + cost as a fraction of full exposure
-LEVERS = [
-    {"id": "bess", "label": "Dispatch BESS", "w": 0.50, "cost": 0.060},
-    {"id": "shed", "label": "Shed non-critical load", "w": 0.35, "cost": 0.045},
-    {"id": "curtail", "label": "Curtail charging", "w": 0.40, "cost": 0.055},
+# fault-specific response levers: each has a containment weight (w) and a cost (as a fraction
+# of full exposure). Different faults have different levers with different effectiveness/cost,
+# so the optimum genuinely differs per fault (e.g. remote-reboot dominates a charger fault;
+# isolate-the-pack dominates a BESS thermal event).
+LEVER_SETS = {
+    "TX-1:overload": [
+        {"id": "bess", "label": "Dispatch BESS", "w": 0.55, "cost": 0.05},
+        {"id": "shed", "label": "Shed non-critical DC", "w": 0.40, "cost": 0.06},
+        {"id": "curtail", "label": "Curtail charging", "w": 0.35, "cost": 0.08},
+    ],
+    "TX-1:overheat": [
+        {"id": "cool", "label": "Force-cool transformer", "w": 0.50, "cost": 0.03},
+        {"id": "throttle", "label": "Throttle DC power", "w": 0.40, "cost": 0.06},
+        {"id": "shift", "label": "Shift load to Feeder F-2", "w": 0.30, "cost": 0.04},
+    ],
+    "F-1:overcurrent_trip": [
+        {"id": "reclose", "label": "Re-close after load-shed", "w": 0.55, "cost": 0.04},
+        {"id": "rebal", "label": "Rebalance to Feeder F-2", "w": 0.45, "cost": 0.06},
+    ],
+    "F-2:overcurrent_trip": [
+        {"id": "shift", "label": "Shift AC bays to F-1", "w": 0.50, "cost": 0.05},
+        {"id": "stagger", "label": "Stagger AC charging", "w": 0.35, "cost": 0.03},
+    ],
+    "DCFC:charger_offline": [
+        {"id": "reboot", "label": "Remote-reboot OCPP", "w": 0.60, "cost": 0.01},
+        {"id": "reroute", "label": "Reroute drivers", "w": 0.30, "cost": 0.03},
+        {"id": "truck", "label": "Dispatch truck-roll", "w": 0.45, "cost": 0.09},
+    ],
+    "DCFC:connector_fault": [
+        {"id": "lock", "label": "Lock + reroute", "w": 0.65, "cost": 0.02},
+        {"id": "reset", "label": "Remote diagnostic reset", "w": 0.40, "cost": 0.03},
+    ],
+    "BESS-A:thermal_runaway": [
+        {"id": "isolate", "label": "Isolate + cool pack", "w": 0.70, "cost": 0.03},
+        {"id": "gridcov", "label": "Cover load from grid", "w": 0.30, "cost": 0.09},
+    ],
+    "BESS-A:offline": [
+        {"id": "hold", "label": "Hold peak on grid", "w": 0.45, "cost": 0.07},
+        {"id": "backup", "label": "Bring backup online", "w": 0.55, "cost": 0.05},
+    ],
+    "GRID:brownout": [
+        {"id": "ride", "label": "Ride through on BESS + solar", "w": 0.60, "cost": 0.05},
+        {"id": "curtail", "label": "Curtail DC-fast", "w": 0.35, "cost": 0.06},
+    ],
+    "GRID:supply_loss": [
+        {"id": "island", "label": "Island on BESS + solar", "w": 0.55, "cost": 0.05},
+        {"id": "priority", "label": "Prioritise AC bays", "w": 0.30, "cost": 0.02},
+        {"id": "restart", "label": "Sequence restart", "w": 0.20, "cost": 0.03},
+    ],
+}
+DEFAULT_LEVERS = [
+    {"id": "bess", "label": "Dispatch BESS", "w": 0.50, "cost": 0.05},
+    {"id": "shed", "label": "Shed non-critical load", "w": 0.35, "cost": 0.05},
+    {"id": "curtail", "label": "Curtail charging", "w": 0.40, "cost": 0.06},
 ]
 COND_PEN = {"peak": 0.15, "heatwave": 0.18, "rain": 0.08}
+
+
+def _levers(asset: str, fault: str) -> list:
+    return LEVER_SETS.get(f"{asset}:{fault}", DEFAULT_LEVERS)
 
 
 def _spec(asset: str, fault: str) -> dict:
@@ -58,33 +111,43 @@ def optimize(req: OptimizeReq):
     full = _full(spec)
     prev = spec["prev"]
     cond = min(0.6, sum(COND_PEN.get(c, 0.0) for c in req.conditions))
+    levers = _levers(req.assetId, req.faultId)
     steps = [0.0, 0.25, 0.5, 0.75, 1.0]
 
-    def evaluate(b, s, c):
-        contain = min(0.92, LEVERS[0]["w"] * b + LEVERS[1]["w"] * s + LEVERS[2]["w"] * c) * (1 - cond)
+    def evaluate(vals):
+        contain = min(0.95, sum(l["w"] * v for l, v in zip(levers, vals))) * (1 - cond)
         residual = full * (1 - prev * contain)
-        action = full * (LEVERS[0]["cost"] * b + LEVERS[1]["cost"] * s + LEVERS[2]["cost"] * c)
+        action = full * sum(l["cost"] * v for l, v in zip(levers, vals))
         return residual, action, residual + action, contain
 
     best = None
     evals = 0
-    for b, s, c in itertools.product(steps, steps, steps):
-        residual, action, tot, contain = evaluate(b, s, c)
+    for combo in itertools.product(steps, repeat=len(levers)):
+        residual, action, tot, contain = evaluate(list(combo))
         evals += 1
         if best is None or tot < best["total"]:
-            best = {"bess": b, "shed": s, "curtail": c, "contain": round(contain, 3),
+            best = {"vals": list(combo), "contain": round(contain, 3),
                     "residual": round(residual), "action_cost": round(action), "total": round(tot)}
 
+    # best achievable with a SINGLE lever (what a preset gives you) — to show the combo's edge
+    best_single = None
+    for i in range(len(levers)):
+        for v in steps[1:]:
+            vals = [0.0] * len(levers)
+            vals[i] = v
+            _, _, tot, _ = evaluate(vals)
+            if best_single is None or tot < best_single:
+                best_single = tot
+
     do_nothing = round(full)
-    curve = []
-    for e in steps:
-        residual, action, tot, _ = evaluate(e, e, e)
-        curve.append({"effort": e, "exposure": round(residual)})
     return {
-        "full_exposure": do_nothing, "do_nothing": do_nothing, "optimal": best,
-        "savings": do_nothing - best["total"], "evaluations": evals,
-        "levers": [{"id": l["id"], "label": l["label"], "value": best[l["id"]]} for l in LEVERS],
-        "curve": curve,
+        "full_exposure": do_nothing, "do_nothing": do_nothing,
+        "optimal": {"contain": best["contain"], "residual": best["residual"],
+                    "action_cost": best["action_cost"], "total": best["total"]},
+        "savings": do_nothing - best["total"],
+        "vs_single": round(best_single - best["total"]) if best_single is not None else 0,
+        "evaluations": evals,
+        "levers": [{"id": levers[i]["id"], "label": levers[i]["label"], "value": best["vals"][i]} for i in range(len(levers))],
     }
 
 
