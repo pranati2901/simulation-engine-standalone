@@ -455,7 +455,7 @@ body { background: var(--bg); }
 .insp-btn { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 7px; background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.4); color: #e7eaff; border-radius: 10px; padding: 9px; cursor: pointer; font-weight: 600; }
 .insp-btn.primary { background: linear-gradient(135deg,#7c3aed,#2563eb); border-color: transparent; color: #fff; }
 .insp-ai { margin-top: 8px; font-size: 12px; line-height: 1.6; color: #cdd3ec; background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.25); border-radius: 10px; padding: 10px 12px; }
-.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.25); border-top-color: #c4b5fd; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.25); border-top-color: #c4b5fd; border-radius: 50%; animation: sp .7s linear infinite; display: inline-block; vertical-align: middle; }
 
 /* data layer connectors */
 .conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
