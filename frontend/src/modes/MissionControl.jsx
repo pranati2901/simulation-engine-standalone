@@ -95,6 +95,16 @@ export default function MissionControl() {
     }, 430)
   }
 
+  // scoped run — click an asset's fault → guaranteed-accurate simulation (skips the NL planner)
+  const runFault = (assetId, faultId) => {
+    const a = assetById(assetId)
+    const flabel = faultsFor(assetId).find(x => x.id === faultId)?.label || faultId
+    const q = `What happens if ${a?.name || assetId} has a ${flabel.toLowerCase()}?`
+    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null)
+    let s = 0
+    const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(assetId, faultId, q) } }, 430)
+  }
+
   const pickStrategy = (st) => {
     setActiveKey(st.key); setScenario(st.scn); setIdx(0); setPlaying(true)
     groundedAnswer(st.scn, `Under the "${st.name}" strategy, what happens and what is the business impact?`)
@@ -130,6 +140,19 @@ export default function MissionControl() {
   const saved = strategies && activeStrat ? strategies.baseExposure - activeStrat.exposure : 0
   const drillScenario = f ? { id: `${f.assetId}:${f.fault}`, name: `${f.fault} — ${f.asset}`, recommended_environment: { actors: [{ name: f.asset }] } } : null
 
+  const assetPickerJsx = (
+    <div className="mc-assets">
+      {MODEL.assets.map(a => (
+        <div key={a.id} className="mc-asset-row">
+          <div className="mc-asset-name">{a.name}</div>
+          <div className="mc-asset-faults">
+            {faultsFor(a.id).map(fo => <button key={fo.id} className="mc-fault-chip" onClick={() => runFault(a.id, fo.id)}>{fo.label}</button>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
   if (phase === 'home') return (
     <div className="mc mc-home">
       <div className="mc-brand">◆ SimCore</div>
@@ -140,6 +163,10 @@ export default function MissionControl() {
         <button onClick={() => submit()}>Simulate →</button>
       </div>
       <div className="mc-sugg">{SUGGESTIONS.map(s => <button key={s} onClick={() => submit(s)}>{s}</button>)}</div>
+      <div className="mc-assets-home">
+        <div className="mc-assets-t">Or pick an asset &amp; fault — the exact things this twin can simulate</div>
+        {assetPickerJsx}
+      </div>
       <div className="mc-foot">Simulate Every Decision Before Reality.</div>
     </div>
   )
@@ -172,8 +199,8 @@ export default function MissionControl() {
 
       <div className="mc-body">
         <aside className="mc-left">
-          <div className="mc-panel-t">Assets</div>
-          {MODEL.assets.map(a => <div key={a.id} className="mc-asset">{a.name}</div>)}
+          <div className="mc-panel-t">Assets — click a fault to simulate</div>
+          {assetPickerJsx}
         </aside>
 
         <main className="mc-center">

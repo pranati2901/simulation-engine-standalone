@@ -389,6 +389,14 @@ body { background: var(--bg); }
 .mc-panel-t { font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: #7a86ad; font-weight: 700; margin-bottom: 10px; }
 .mc-asset { font-size: 12.5px; color: #cdd5f0; padding: 7px 9px; border-radius: 8px; cursor: pointer; }
 .mc-asset:hover { background: rgba(255,255,255,.05); }
+.mc-assets { display: flex; flex-direction: column; gap: 6px; }
+.mc-asset-row { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+.mc-asset-name { font-size: 12px; font-weight: 600; color: #e7eaff; margin-bottom: 5px; }
+.mc-asset-faults { display: flex; flex-wrap: wrap; gap: 5px; }
+.mc-fault-chip { background: rgba(124,58,237,.16); border: 1px solid rgba(124,58,237,.4); color: #dcd6ff; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; cursor: pointer; font-family: inherit; transition: all .12s; }
+.mc-fault-chip:hover { background: rgba(124,58,237,.45); color: #fff; }
+.mc-assets-home { width: min(700px, 92%); margin-top: 4px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 13px 16px; text-align: left; }
+.mc-assets-t { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: #7a86ad; font-weight: 700; margin-bottom: 10px; }
 .mc-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 12px; }
 .mc-metrics > div { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; padding: 11px 13px; }
 .mc-metrics .v { font-size: 20px; font-weight: 800; }
