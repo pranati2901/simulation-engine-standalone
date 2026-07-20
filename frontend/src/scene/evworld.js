@@ -445,13 +445,15 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
     if (g) { selBox = new THREE.BoxHelper(g, 0x10b981); scene.add(selBox); openInspector(g.userData.asset) }
   }
   // explainable highlight — outline the asset a simulation/answer is about, in pulsing red
-  let focusBox = null
+  let focusBox = null, focusTarget = null
   function focusAsset(id) {
     if (focusBox) { scene.remove(focusBox); focusBox.geometry.dispose(); focusBox = null }
+    focusTarget = null
     if (!id) return
     const g = selectable.find(s => s.userData.asset.id === id)
     if (!g) return
-    focusBox = new THREE.BoxHelper(g, 0xff2020); focusBox.material.transparent = true; scene.add(focusBox)
+    focusBox = new THREE.BoxHelper(g, 0x22d3ee); focusBox.material.transparent = true; scene.add(focusBox)
+    const p = new THREE.Vector3(); g.getWorldPosition(p); focusTarget = p
   }
   renderer.domElement.addEventListener('pointerdown', ev => {
     const g = pickAt(ev.clientX, ev.clientY); if (g) selectAsset(g)
@@ -633,7 +635,8 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       }
     }
     if (selBox) selBox.update()
-    if (focusBox) { focusBox.update(); focusBox.material.opacity = 0.45 + 0.45 * Math.abs(Math.sin(t * 4)) }
+    if (focusBox) { focusBox.update(); focusBox.material.opacity = 0.6 + 0.4 * Math.abs(Math.sin(t * 3)) }
+    if (focusTarget) controls.target.lerp(focusTarget, 0.035)
     controls.update()
     if (composer) composer.render(); else renderer.render(scene, camera)
   }

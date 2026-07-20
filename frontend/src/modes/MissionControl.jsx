@@ -130,6 +130,8 @@ export default function MissionControl() {
   const stages = scenario ? scenario.sequence.map((s, i) => ({ ...s, n: i + 1 })).filter(s => s.at * scenario.duration <= (cur?.t ?? 0)) : []
   const SCENE_ID = { 'TX-1': 'TX-1', 'BESS-A': 'BESS-A', 'DCFC': 'DCFC-01', 'F-1': 'EMS-1', 'F-2': 'EMS-1', 'GRID': 'TX-1' }
   const focusId = f ? (SCENE_ID[f.assetId] || 'TX-1') : null
+  const activeStrat = strategies?.list.find(s => s.key === activeKey)
+  const saved = strategies && activeStrat ? strategies.baseExposure - activeStrat.exposure : 0
 
   if (phase === 'home') return (
     <div className="mc mc-home">
@@ -179,7 +181,7 @@ export default function MissionControl() {
 
         <main className="mc-center">
           <div className="mc-stage">
-            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} focusId={focusId} height={520} />
+            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} focusId={focusId} height={400} />
             <div className="mc-vignette" style={{ opacity: crisis }} />
             {narr.length > 0 && <div className="mc-narrate">▸ {narr[narr.length - 1].text}</div>}
           </div>
@@ -189,6 +191,13 @@ export default function MissionControl() {
             <div><div className="v">{m.kwh}</div><div className="l">kWh curtailed</div></div>
             <div><div className="v">{m.sessions}</div><div className="l">sessions dropped</div></div>
           </div>
+          {strategies && activeStrat && (
+            <div className={`mc-compare ${activeKey === 'nothing' ? 'bad' : 'good'}`}>
+              {activeKey === 'nothing'
+                ? <>⚠ No action taken — full exposure <b>{inr(activeStrat.exposure)}</b>. Pick a strategy on the right to contain it.</>
+                : <>✓ <b>{activeStrat.name}</b> — exposure cut to <b>{inr(activeStrat.exposure)}</b>, saving <b>{inr(saved)}</b> ({Math.round(100 * saved / (strategies.baseExposure || 1))}% less than doing nothing).</>}
+            </div>
+          )}
           <div className="mc-timeline">
             {events.map((e, i) => (
               <button key={i} className={`mc-ev ${e.kind}`} onClick={() => seek(e.t)}>
