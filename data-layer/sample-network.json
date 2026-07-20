@@ -1,0 +1,64 @@
+{
+  "operator": "Sample CPO (Gaadin-style)",
+  "currency": "INR",
+  "tariff": {
+    "energy_tou": [
+      { "window": "off_peak_00_06", "inr_per_kwh": 7.5 },
+      { "window": "normal_06_18",   "inr_per_kwh": 9.0 },
+      { "window": "peak_18_22",     "inr_per_kwh": 12.5 }
+    ],
+    "demand_charge_inr_per_kw_month": 350,
+    "avg_revenue_inr_per_kwh": 18
+  },
+  "sla": {
+    "uptime_target_pct": 98,
+    "penalty_inr_per_hour_down": 1200,
+    "stranded_session_reimbursement_inr": 200
+  },
+  "topology": {
+    "substations": [
+      { "id": "SS-1", "rating_kva": 1000 }
+    ],
+    "transformers": [
+      { "id": "TX-1", "substation": "SS-1", "rating_kva": 630, "temp_c": 62 }
+    ],
+    "feeders": [
+      { "id": "F-1", "transformer": "TX-1", "capacity_kw": 250 },
+      { "id": "F-2", "transformer": "TX-1", "capacity_kw": 250 }
+    ]
+  },
+  "stations": [
+    {
+      "id": "ST-01", "name": "Mall Plaza", "feeder": "F-1",
+      "chargers": [
+        { "id": "CH-01", "ocpp_id": "MALL-DC-01", "type": "DC", "power_kw": 120, "connector": "CCS2", "status": "Charging" },
+        { "id": "CH-02", "ocpp_id": "MALL-DC-02", "type": "DC", "power_kw": 120, "connector": "CCS2", "status": "Available" }
+      ]
+    },
+    {
+      "id": "ST-02", "name": "Highway Hub", "feeder": "F-1",
+      "chargers": [
+        { "id": "CH-03", "ocpp_id": "HWY-DC-01", "type": "DC", "power_kw": 240, "connector": "CCS2", "status": "Charging" }
+      ]
+    },
+    {
+      "id": "ST-03", "name": "Depot AC", "feeder": "F-2",
+      "chargers": [
+        { "id": "CH-04", "ocpp_id": "DEP-AC-01", "type": "AC", "power_kw": 22, "connector": "Type2", "status": "Charging" }
+      ]
+    }
+  ],
+  "bess": [
+    { "id": "BESS-1", "feeder": "F-1", "capacity_kwh": 200, "power_kw": 100, "temp_c": 30 }
+  ],
+  "telemetry_sample": {
+    "peak_feeder_load_kw": { "F-1": 235, "F-2": 180 },
+    "avg_sessions_per_day": { "ST-01": 42, "ST-02": 55, "ST-03": 12 }
+  },
+  "fault_history_12mo": [
+    { "asset": "TX-1",  "fault": "overheat",         "count": 2, "mean_repair_hours": 6.0 },
+    { "asset": "F-1",   "fault": "overload_trip",     "count": 3, "mean_repair_hours": 1.5 },
+    { "asset": "CH-01", "fault": "connector_fault",   "count": 5, "mean_repair_hours": 2.0 },
+    { "asset": "CH-03", "fault": "charger_offline",   "count": 4, "mean_repair_hours": 3.0 }
+  ]
+}

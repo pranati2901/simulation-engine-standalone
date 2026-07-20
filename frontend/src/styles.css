@@ -346,6 +346,24 @@ body { background: var(--bg); }
 .ne-stats .v { font-family: var(--display); font-size: 17px; font-weight: 800; line-height: 1.1; }
 .ne-stats .l { font-size: 10px; color: var(--muted); margin-top: 2px; }
 
+/* ── 3D EV world (evworld scene) ── */
+:root { --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.hero3d { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid #1d2138; background: #0a0e1a; }
+.scene3d-host { display: block !important; }
+.scene3d-host canvas { display: block; }
+.evw-host { background: radial-gradient(900px 340px at 50% -12%, rgba(16,185,129,.28), transparent 70%), #0a0e1a; }
+.v-chip { position: absolute; top: 14px; left: 14px; background: rgba(12,14,28,.72); backdrop-filter: blur(8px); border: 1px solid rgba(124,58,237,.4); color: #dfe3ff; font-family: var(--mono); font-size: 11px; padding: 6px 12px; border-radius: 999px; display: flex; align-items: center; gap: 7px; pointer-events: auto; z-index: 6; }
+.v-chip b { color: #fff; }
+.evw-label { position: absolute; z-index: 6; transform: translate(-50%,-140%); pointer-events: none; text-align: center; }
+.evw-label .evw-l-t { font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; color: #9fb0d8; font-weight: 700; font-family: var(--mono); }
+.evw-label .evw-l-v { font-family: var(--display); font-size: 14px; font-weight: 700; color: #eaf6ff; }
+.evw-label .evw-ok { color: #34e2b0; } .evw-label .evw-warn { color: #fbbf24; } .evw-label .evw-crit { color: #fb7185; } .evw-label .evw-sun { color: #fcd34d; }
+.evw-legend { position: absolute; left: 14px; bottom: 14px; z-index: 6; display: flex; gap: 12px; flex-wrap: wrap; }
+.evw-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: #c7d2ec; font-family: var(--mono); }
+.evw-legend i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+.inspector { position: absolute; top: 60px; right: 14px; width: 300px; max-height: calc(100% - 96px); overflow: auto; z-index: 8; background: rgba(11,13,30,.94); backdrop-filter: blur(14px); border: 1px solid rgba(124,58,237,.5); border-radius: 16px; color: #e7eaff; box-shadow: 0 24px 60px rgba(0,0,0,.5); pointer-events: auto; padding: 14px 16px; }
+.inspector.hidden { display: none; }
+
 /* dashboard preventable callout */
 .prevent-card { background: var(--gradient); color: #fff; border: 0; }
 .pc-k { font-family: var(--display); font-size: 34px; font-weight: 800; line-height: 1; letter-spacing: -.5px; }
