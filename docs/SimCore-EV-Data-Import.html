@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SimCore — EV Data Import Spec</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #17203a; font-size: 10.3px; line-height: 1.5; margin: 0; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  h2 { font-size: 12px; margin: 15px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #7c3aed; color: #4c1d95; }
+  .sub { color: #6b7280; font-size: 11px; margin: 0; }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 3px solid #7c3aed; padding-bottom: 9px; }
+  .brand .who { font-weight: 800; color: #7c3aed; letter-spacing: .5px; }
+  .lead { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+  th { text-align: left; background: #f3f4f6; font-size: 8.5px; text-transform: uppercase; letter-spacing: .4px; color: #4b5563; padding: 5px 7px; border: 1px solid #e5e7eb; }
+  td { padding: 5px 7px; border: 1px solid #e5e7eb; vertical-align: top; }
+  td.k { font-weight: 700; white-space: nowrap; color: #111827; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 9.5px; color: #6d28d9; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 9px; padding: 12px 14px; font-size: 9px; line-height: 1.55; overflow: auto; white-space: pre; }
+  pre .k { color: #93c5fd; } pre .s { color: #86efac; } pre .n { color: #fca5a5; } pre .c { color: #64748b; }
+  .pill { display: inline-block; border-radius: 20px; padding: 1px 7px; font-size: 8.5px; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; }
+  ul { margin: 4px 0; padding-left: 16px; }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <div><h1>SimCore — EV Data Import Spec</h1><p class="sub">The exact data we need, and the format our platform ingests</p></div>
+    <div class="who">NextXR · SimCore</div>
+  </div>
+
+  <div class="lead">
+    <b>How it works.</b> SimCore never invents results — it builds a live model of your network from the data below, and the
+    simulation engine computes every outcome on <b>your</b> assets, tariffs and topology. This document is the <b>import contract</b>:
+    a network provided in the format on the right loads straight into the platform's Data Layer and drives the twin, the fault
+    simulations and the AI copilot. A pilot can start with a <span class="pill">SINGLE SITE</span> and expand.
+  </div>
+
+  <h2>1 · Where the data comes from (connectors)</h2>
+  <table>
+    <tr><th>Source system</th><th>What we pull</th><th>Feeds</th></tr>
+    <tr><td class="k">CMS / CPMS + OCPP 1.6/2.0.1</td><td>Charger inventory, IDs, power; StatusNotification, MeterValues, fault codes</td><td>Assets + utilisation + faults</td></tr>
+    <tr><td class="k">Single-line diagram / GIS</td><td>charger → feeder → transformer → grid topology &amp; ratings</td><td>The cascade path</td></tr>
+    <tr><td class="k">SCADA / EMS / meters</td><td>Feeder load, transformer &amp; BESS temperature, voltage</td><td>Fault triggers</td></tr>
+    <tr><td class="k">Utility &amp; CPO contracts</td><td>Time-of-use tariff, demand charge, SLA penalties</td><td>The ₹ on every outcome</td></tr>
+    <tr><td class="k">Monitoring / CMMS history</td><td>Past faults per asset, mean repair time</td><td>Failure probabilities (sharpens accuracy)</td></tr>
+  </table>
+
+  <h2>2 · The import format <span class="pill">this is what the platform reads</span></h2>
+  <p style="margin:2px 0 6px">Provide the network as one JSON object (or a CSV we map into it). This exact shape loads via the Data Layer's <b>Import network</b>:</p>
+  <pre><span class="c">// one site — paste into Data → Import network, or send us the file</span>
+{
+  <span class="k">"site"</span>: <span class="s">"Mall Plaza · City Centre"</span>,
+  <span class="k">"currency"</span>: <span class="s">"INR"</span>,
+  <span class="k">"cost"</span>: {
+    <span class="k">"rev_inr_per_kwh"</span>: <span class="n">18</span>,           <span class="c">// price to the driver</span>
+    <span class="k">"penalty_inr_per_hour_down"</span>: <span class="n">1200</span>,  <span class="c">// SLA penalty per hour a station is down</span>
+    <span class="k">"demand_charge_inr_per_kw"</span>: <span class="n">350</span>     <span class="c">// utility demand charge</span>
+  },
+  <span class="k">"assets"</span>: [
+    { <span class="k">"id"</span>: <span class="s">"TX-1"</span>,   <span class="k">"name"</span>: <span class="s">"Transformer T1"</span>, <span class="k">"type"</span>: <span class="s">"transformer"</span>,  <span class="k">"rating_kw"</span>: <span class="n">630</span>,  <span class="k">"faults"</span>: [<span class="s">"overload"</span>, <span class="s">"overheat"</span>] },
+    { <span class="k">"id"</span>: <span class="s">"F-1"</span>,    <span class="k">"name"</span>: <span class="s">"Feeder F-1"</span>,     <span class="k">"type"</span>: <span class="s">"feeder"</span>,       <span class="k">"capacity_kw"</span>: <span class="n">400</span>, <span class="k">"faults"</span>: [<span class="s">"overcurrent_trip"</span>] },
+    { <span class="k">"id"</span>: <span class="s">"DCFC"</span>,  <span class="k">"name"</span>: <span class="s">"DC-fast bank"</span>,   <span class="k">"type"</span>: <span class="s">"charger_bank"</span>, <span class="k">"chargers"</span>: <span class="n">8</span>, <span class="k">"kw"</span>: <span class="n">120</span>, <span class="k">"faults"</span>: [<span class="s">"charger_offline"</span>, <span class="s">"connector_fault"</span>] },
+    { <span class="k">"id"</span>: <span class="s">"BESS-A"</span>, <span class="k">"name"</span>: <span class="s">"BESS-A"</span>,        <span class="k">"type"</span>: <span class="s">"bess"</span>,   <span class="k">"capacity_kwh"</span>: <span class="n">200</span>, <span class="k">"power_kw"</span>: <span class="n">100</span>, <span class="k">"faults"</span>: [<span class="s">"thermal_runaway"</span>, <span class="s">"offline"</span>] },
+    { <span class="k">"id"</span>: <span class="s">"GRID"</span>,  <span class="k">"name"</span>: <span class="s">"Grid supply"</span>,   <span class="k">"type"</span>: <span class="s">"grid"</span>,   <span class="k">"faults"</span>: [<span class="s">"brownout"</span>, <span class="s">"supply_loss"</span>] }
+  ]
+}</pre>
+
+  <h2>3 · Field reference</h2>
+  <table>
+    <tr><th>Field</th><th>Required</th><th>Notes</th></tr>
+    <tr><td class="k">site</td><td>yes</td><td>Display name of the site/network</td></tr>
+    <tr><td class="k">cost.rev_inr_per_kwh / penalty_inr_per_hour_down / demand_charge_inr_per_kw</td><td>yes</td><td>Your tariff &amp; SLA — every ₹ figure derives from these</td></tr>
+    <tr><td class="k">assets[].id / name</td><td>yes</td><td>Stable code + label (e.g. <code>TX-1</code>, "Transformer T1")</td></tr>
+    <tr><td class="k">assets[].type</td><td>yes</td><td>One of <code>transformer</code> · <code>feeder</code> · <code>charger_bank</code> · <code>bess</code> · <code>grid</code></td></tr>
+    <tr><td class="k">assets[].faults</td><td>yes</td><td>Fault ids valid for the type — see below</td></tr>
+    <tr><td class="k">rating_kw / capacity_kw / chargers / kw / capacity_kwh / power_kw</td><td>optional</td><td>Ratings that sharpen the model per asset type</td></tr>
+  </table>
+  <p style="margin:6px 0 2px"><b>Valid fault ids by type:</b></p>
+  <ul style="margin-top:2px">
+    <li><code>transformer</code> → overload, overheat &nbsp;·&nbsp; <code>feeder</code> → overcurrent_trip &nbsp;·&nbsp; <code>charger_bank</code> → charger_offline, connector_fault</li>
+    <li><code>bess</code> → thermal_runaway, offline &nbsp;·&nbsp; <code>grid</code> → brownout, supply_loss</li>
+  </ul>
+
+  <h2>4 · What changes when you provide data — and what doesn't (honest)</h2>
+  <ul>
+    <li><b>Becomes yours:</b> the asset list, the fault menu, every ₹ figure (your tariffs &amp; SLA), the AI copilot's grounded answers, the Monte-Carlo probabilities, and the mitigation-strategy ranking.</li>
+    <li><b>Stays representative:</b> the 3-D scene remains a stylised charging-hub twin — it doesn't auto-generate bespoke geometry from your layout. Numbers and reasoning are yours; the 3-D is illustrative.</li>
+    <li><b>Deployment adds:</b> live OCPP/SCADA streaming (this doc is the one-time export; a pilot then wires the live feed).</li>
+  </ul>
+
+  <h2>Format, scope &amp; security</h2>
+  <ul>
+    <li><b>Format:</b> the JSON above, a CSV we map to it, or a read-only API. Standard OCPP — no changes to your stack.</li>
+    <li><b>Minimum to start:</b> <code>site</code>, <code>cost</code>, and a few <code>assets</code> for one site. Ratings &amp; history are optional and improve accuracy.</li>
+    <li><b>Security:</b> read-only; anonymisable (asset codes, not addresses); no control signals are ever sent to your equipment.</li>
+  </ul>
+
+  <div class="foot">NextXR · SimCore — EV Data Import Spec v1 · Confidential · The simulation engine is the source of truth; the AI only interprets and explains it.</div>
+</body>
+</html>

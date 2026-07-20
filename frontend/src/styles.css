@@ -424,6 +424,11 @@ body { background: var(--bg); }
 .mc-compare { margin-top: 10px; padding: 9px 14px; border-radius: 11px; font-size: 12.5px; font-weight: 600; line-height: 1.4; }
 .mc-compare.good { background: rgba(52,226,176,.14); border: 1px solid rgba(52,226,176,.4); color: #7ff0cf; }
 .mc-compare.bad { background: rgba(251,113,133,.12); border: 1px solid rgba(251,113,133,.35); color: #ffc1cb; }
+.mc-mc-head { display: flex; justify-content: space-between; font-size: 12px; color: #cdd5f0; margin-bottom: 7px; }
+.mc-mc-head b { font-size: 19px; }
+.mc-mc-bar { display: flex; height: 11px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,.08); }
+.mc-mc-bar > div { transition: width .4s; }
+.mc-mc-note { font-size: 11px; color: #9fb0d8; margin-top: 8px; line-height: 1.55; }
 .mc-repair-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); color: #e7eaff; border-radius: 12px; padding: 12px 16px; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13.5px; }
 .mc-repair-toggle:hover { border-color: rgba(124,58,237,.6); }
 .mc-repair-toggle > span:last-child { color: #9fb0d8; font-size: 12px; }

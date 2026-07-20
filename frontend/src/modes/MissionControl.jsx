@@ -238,6 +238,21 @@ export default function MissionControl() {
             </div>
           )}
 
+          {mc && (
+            <div className="mc-montecarlo">
+              <div className="mc-panel-t" style={{ marginTop: 16 }}>Monte Carlo — {mc.runs} engine runs ⚙</div>
+              <div className="mc-mc-head">
+                <span><b style={{ color: '#34e2b0' }}>{mc.certified_pct}%</b> contained</span>
+                <span><b style={{ color: '#fb7185' }}>{100 - mc.certified_pct}%</b> cascades to blackout</span>
+              </div>
+              <div className="mc-mc-bar">
+                <div style={{ width: `${mc.certified_pct}%`, background: '#34e2b0' }} />
+                <div style={{ width: `${100 - mc.certified_pct}%`, background: '#fb7185' }} />
+              </div>
+              <div className="mc-mc-note">The engine replayed this fault <b>{mc.runs} times</b> across varying response readiness. This is the <b>probability</b> of the outcome — not a single guess.</div>
+            </div>
+          )}
+
           {strategies && (
             <>
               <div className="mc-panel-t" style={{ marginTop: 16 }}>Strategies — click to simulate</div>
