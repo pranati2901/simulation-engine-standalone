@@ -53,6 +53,10 @@ export const FAULTS = {
 export const assetById = (id) => MODEL.assets.find(a => a.id === id)
 export const faultsFor = (id) => (assetById(id)?.faults || []).map(f => ({ id: f, label: FAULTS[f]?.label || f }))
 
+// which real backend EV scenario the deterministic engine runs for Monte-Carlo grounding
+export const engineScenarioFor = (assetId) =>
+  assetById(assetId)?.type === 'charger_bank' ? 'ev.charger_fault_v1' : 'ev.grid_overload_v1'
+
 // best-effort resolve of a free-text question → {assetId, faultId}
 export function resolveText(q) {
   const t = (q || '').toLowerCase()

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import EVWorld from '../components/EVWorld.jsx'
 import { api } from '../api.js'
-import { MODEL, assetById, faultsFor, resolveText } from '../ev/networkModel.js'
+import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor } from '../ev/networkModel.js'
 import { HEALTHY, HORIZONS, buildScenario, inr } from '../ev/scenarios.js'
 
 const SUGGESTIONS = [
@@ -33,6 +33,7 @@ export default function MissionControl() {
   const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [answer, setAnswer] = useState(null)
+  const [mc, setMc] = useState(null)
   const [horizon, setHorizon] = useState('now')
   const selRef = useRef(null)
   const scenarioRef = useRef(null); scenarioRef.current = scenario
@@ -54,12 +55,19 @@ export default function MissionControl() {
     return { list, worst, bestKey: best.key, baseExposure: doNothing.exposure, doNothing }
   }
 
-  const startLive = (assetId, faultId, q) => {
+  const startLive = async (assetId, faultId, q) => {
     selRef.current = { assetId, faultId, q }
     const st = buildStrats(assetId, faultId, horizon)
     setStrategies(st)
-    setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true)
-    groundedAnswer(st.doNothing.scn, q)
+    setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true); setMc(null)
+    // deterministic backend Monte Carlo → real headline confidence
+    let facts = st.doNothing.scn.facts
+    try {
+      const r = await api.monteCarlo(engineScenarioFor(assetId), 'ev')
+      const info = { runs: r.iterations, contained_pct: Math.round((r.kpi_stats?.containment_rate?.mean ?? 0) * 100), certified_pct: Math.round((r.certified_rate || 0) * 100) }
+      setMc(info); facts = { ...facts, engine_monte_carlo: info }
+    } catch { /* fall back to model-only grounding */ }
+    groundedAnswer({ facts }, q)
   }
 
   const onHorizon = (hk) => {
@@ -75,7 +83,7 @@ export default function MissionControl() {
 
   const submit = (text) => {
     const q = (text ?? prompt).trim(); if (!q) return
-    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null)
+    setPrompt(q); setPhase('thinking'); setReasonStep(0); setAnswer(null); setScenario(null); setStrategies(null); setMc(null)
     let resolved = resolveText(q) || { assetId: 'TX-1', faultId: 'overload' }
     const planP = api.plan(q, MODEL.assets.map(a => ({ id: a.id, name: a.name, faults: a.faults })))
       .then(p => {
@@ -195,7 +203,8 @@ export default function MissionControl() {
             <div className="mc-facts">
               <div><b>{inr(f.total_exposure_inr)}</b><span>exposure</span></div>
               <div><b>{f.preventable_pct}%</b><span>preventable</span></div>
-              <div><b>{f.peak_grid_load_pct}%</b><span>peak load</span></div>
+              {mc ? <div title="Deterministic engine Monte Carlo"><b>{mc.contained_pct}%</b><span>contained · {mc.runs}-run MC ⚙</span></div>
+                : <div><b>{f.peak_grid_load_pct}%</b><span>peak load</span></div>}
             </div>
           )}
 
