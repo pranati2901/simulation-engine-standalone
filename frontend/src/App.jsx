@@ -12,6 +12,7 @@ import WarRoom from './modes/WarRoom.jsx'
 import MissionControl from './modes/MissionControl.jsx'
 import DataLayer from './modes/DataLayer.jsx'
 import Portfolio from './modes/Portfolio.jsx'
+import EVRecords from './modes/EVRecords.jsx'
 import EVNetwork from './modes/EVNetwork.jsx'
 import Builder from './modes/Builder.jsx'
 import Simulation from './modes/Simulation.jsx'
@@ -32,6 +33,7 @@ const NAV = [
   { to: '/twin', id: 'twin', label: 'Twin', icon: 'twin', color: '#f59e0b', title: 'Twin Intelligence', sub: 'Find the weak point before it fails' },
   { to: '/reports', id: 'reports', label: 'Reports', icon: 'reports', color: '#06b6d4', title: 'Reports', sub: 'Board-ready summaries & evidence' },
   { to: '/assumptions', id: 'assumptions', label: 'Assumptions', icon: 'assumptions', color: '#6b7280', title: 'Model Assumptions', sub: 'Cost & impact rates — your inputs' },
+  { to: '/records', id: 'records', label: 'Records', icon: 'library', color: '#8b5cf6', title: 'Records', sub: 'Saved simulations — review & export' },
 ]
 
 // Domain landing — EV is fully built; the others reuse the generic tabs until configured.
@@ -42,8 +44,8 @@ const DOMAINS = [
   { id: 'defence', name: 'Defence', engine: 'defence', desc: 'Readiness & response', icon: 'warroom', color: '#6d28d9' },
   { id: 'aerospace', name: 'Aerospace', engine: 'aerospace', desc: 'Fleet & AOG', icon: 'reports', color: '#2563eb' },
 ]
-const EV_NAV_IDS = ['simulate', 'network', 'data', 'reports', 'library']
-const GENERIC_NAV_IDS = ['dashboard', 'warroom', 'library', 'decision', 'training', 'twin', 'assumptions']
+const EV_NAV_IDS = ['simulate', 'network', 'data', 'records']
+const GENERIC_NAV_IDS = ['dashboard', 'warroom', 'library', 'builder', 'simulation', 'decision', 'training', 'twin', 'reports', 'assumptions']
 
 function DomainChooser({ onPick }) {
   return (
@@ -133,6 +135,7 @@ export default function App() {
                 <Route path="/training" element={<TrainingMode />} />
                 <Route path="/twin" element={<TwinMode />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/records" element={<EVRecords />} />
                 <Route path="/assumptions" element={<Assumptions />} />
                 <Route path="*" element={<Navigate to={home} replace />} />
               </Routes>

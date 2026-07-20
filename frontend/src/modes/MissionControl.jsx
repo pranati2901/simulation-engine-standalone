@@ -4,7 +4,8 @@ import GuidedDrill from '../components/GuidedDrill.jsx'
 import { api } from '../api.js'
 import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor, loadNetwork } from '../ev/networkModel.js'
 import { HEALTHY, HORIZONS, buildScenario, inr, strategiesFor } from '../ev/scenarios.js'
-import { SITES, siteToNetwork } from '../ev/sites.js'
+import { SITES, siteToNetwork, siteExposure, siteRisk } from '../ev/sites.js'
+import { RECORDS_KEY } from './EVRecords.jsx'
 
 const SUGGESTIONS = [
   'What happens if Transformer T1 trips at 5PM?',
@@ -31,6 +32,8 @@ export default function MissionControl() {
   const [answer, setAnswer] = useState(null)
   const [mc, setMc] = useState(null)
   const [repairOpen, setRepairOpen] = useState(false)
+  const [netOpen, setNetOpen] = useState(false)
+  const [recSaved, setRecSaved] = useState(false)
   const [horizon, setHorizon] = useState('now')
   const [siteId, setSiteId] = useState(() => SITES.find(s => MODEL.site.startsWith(s.name))?.id || SITES[0].id)
   const selRef = useRef(null)
@@ -107,6 +110,13 @@ export default function MissionControl() {
     const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(assetId, faultId, q) } }, 430)
   }
 
+  const saveRecord = () => {
+    if (!f) return
+    const rec = { id: Date.now(), ts: Date.now(), site: MODEL.site, asset: f.asset, fault: f.fault, exposure: f.total_exposure_inr, preventable: f.preventable_pct, best: strategies?.list.find(s => s.key === strategies.bestKey)?.name || '—' }
+    try { const cur = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]'); cur.unshift(rec); localStorage.setItem(RECORDS_KEY, JSON.stringify(cur.slice(0, 50))) } catch { /* ignore */ }
+    setRecSaved(true); setTimeout(() => setRecSaved(false), 1600)
+  }
+
   const onSite = (id) => {
     const s = SITES.find(x => x.id === id); if (!s) return
     loadNetwork(siteToNetwork(s)); setSiteId(id)
@@ -158,6 +168,33 @@ export default function MissionControl() {
           </div>
         </div>
       ))}
+    </div>
+  )
+
+  const RISKCOL = { high: '#fb7185', med: '#fbbf24', low: '#34e2b0' }
+  const netRows = SITES.map(s => ({ ...s, exposure: siteExposure(s), risk: siteRisk(s) })).sort((a, b) => b.exposure - a.exposure)
+  const netPanelJsx = (
+    <div className="mc-net">
+      <div className="mc-net-map">
+        <svg viewBox="0 0 100 100" style={{ width: '100%', height: 'auto', display: 'block' }}>
+          {[20, 40, 60, 80].map(v => <g key={v} stroke="rgba(255,255,255,.08)" strokeWidth="0.2"><line x1={v} y1="4" x2={v} y2="96" /><line x1="4" y1={v} x2="96" y2={v} /></g>)}
+          {SITES.map(s => { const risk = siteRisk(s); const r = 2.4 + s.chargers * 0.14; return (
+            <g key={s.id} style={{ cursor: 'pointer' }} onClick={() => onSite(s.id)}>
+              <circle cx={s.x} cy={s.y} r={r} fill={RISKCOL[risk]} fillOpacity={siteId === s.id ? 0.55 : 0.25} stroke={RISKCOL[risk]} strokeWidth={siteId === s.id ? 1.1 : 0.6} />
+              <text x={s.x} y={s.y + r + 2.4} fontSize="2.3" textAnchor="middle" fill="#9fb0d8">{s.name}</text>
+            </g>
+          ) })}
+        </svg>
+      </div>
+      <div className="mc-net-list">
+        {netRows.map(s => (
+          <button key={s.id} className={`mc-net-site ${siteId === s.id ? 'on' : ''}`} onClick={() => onSite(s.id)}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: RISKCOL[s.risk], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 12 }}>{s.name}</span>
+            <b style={{ fontSize: 12 }}>{inr(s.exposure)}</b>
+          </button>
+        ))}
+      </div>
     </div>
   )
 
@@ -248,6 +285,7 @@ export default function MissionControl() {
                 : <div><b>{f.peak_grid_load_pct}%</b><span>peak load</span></div>}
             </div>
           )}
+          {f && !answering && <button className="mc-save" onClick={saveRecord}>{recSaved ? '✓ Saved to Records' : '★ Save this simulation'}</button>}
 
           {mc && (
             <div className="mc-montecarlo">
@@ -306,6 +344,16 @@ export default function MissionControl() {
             <span>{repairOpen ? '▲ hide' : '▼ open'}</span>
           </button>
           {repairOpen && drillScenario && <div className="mc-repair-body"><GuidedDrill key={drillScenario.id} scenario={drillScenario} /></div>}
+        </div>
+      )}
+
+      {scenario && (
+        <div className="mc-repair">
+          <button className="mc-repair-toggle" onClick={() => setNetOpen(o => !o)}>
+            <span>🗺 Network — all {SITES.length} sites (switch &amp; compare exposure)</span>
+            <span>{netOpen ? '▲ hide' : '▼ open'}</span>
+          </button>
+          {netOpen && <div className="mc-repair-body">{netPanelJsx}</div>}
         </div>
       )}
     </div>
