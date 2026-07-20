@@ -11,6 +11,7 @@ import Reports from './modes/Reports.jsx'
 import WarRoom from './modes/WarRoom.jsx'
 import MissionControl from './modes/MissionControl.jsx'
 import DataLayer from './modes/DataLayer.jsx'
+import Portfolio from './modes/Portfolio.jsx'
 import EVNetwork from './modes/EVNetwork.jsx'
 import Builder from './modes/Builder.jsx'
 import Simulation from './modes/Simulation.jsx'
@@ -18,6 +19,7 @@ import Assumptions from './modes/Assumptions.jsx'
 
 const NAV = [
   { to: '/simulate', id: 'simulate', label: 'Simulate', icon: 'simulation', color: '#7c3aed', title: 'Mission Control', sub: 'Ask anything — simulate the future' },
+  { to: '/network', id: 'network', label: 'Network', icon: 'warroom', color: '#ef4444', title: 'Network Operations', sub: 'Every site, one exposure picture' },
   { to: '/data', id: 'data', label: 'Data', icon: 'data', color: '#0891b2', title: 'Company Data Layer', sub: 'Connect your systems — grounded, not guessed' },
   { to: '/dashboard', id: 'dashboard', label: 'Dashboard', icon: 'dashboard', color: '#64748b', title: 'Dashboard', sub: 'Your operation at a glance' },
   { to: '/warroom', id: 'warroom', label: 'War Room', icon: 'warroom', color: '#ef4444', title: 'Portfolio War Room', sub: 'Total $ at risk across every vertical' },
@@ -75,6 +77,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/simulate" element={<MissionControl />} />
+                <Route path="/network" element={<Portfolio />} />
                 <Route path="/data" element={<DataLayer />} />
                 <Route path="/warroom" element={<WarRoom />} />
                 <Route path="/ev-network" element={<EVNetwork />} />

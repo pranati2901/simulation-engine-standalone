@@ -37,6 +37,7 @@ export function resetNetwork() {
   return MODEL
 }
 export const isDefaultNetwork = () => MODEL.site === DEFAULT_MODEL.site && MODEL.assets.length === DEFAULT_MODEL.assets.length
+export const defaultNetwork = () => JSON.parse(JSON.stringify(DEFAULT_MODEL))
 
 export const FAULTS = {
   overload:         { label: 'Overload trip at peak' },
