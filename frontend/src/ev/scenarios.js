@@ -9,6 +9,14 @@ export const HEALTHY = {
   'ev:faultedChargers': 0, 'ev:thermalRunawayRisk': 4, 'ev:cellTempMax': 31, 'ev:chargingPower': 180,
 }
 
+// Time Machine — EV-adoption demand growth + infrastructure ageing (BESS capacity fade).
+export const HORIZONS = {
+  now: { label: 'Now', demand: 1.0, degrade: 1.0 },
+  h27: { label: '2027', demand: 1.3, degrade: 0.94 },
+  h30: { label: '2030', demand: 1.7, degrade: 0.86 },
+  h35: { label: '2035', demand: 2.2, degrade: 0.75 },
+}
+
 // peak = telemetry at worst; kwDown/stationsDown/faulted drive the $; preventable = share a
 // prepared response can contain; onset/peak = envelope timing; rec = recommended action.
 const SPEC = {
@@ -34,17 +42,29 @@ function envAt(t, onset, peak, recStart) {
   return Math.max(0, 1 - Math.min(1, (t - recStart) / 24))   // slower recovery — stays visible
 }
 
-export function buildScenario(assetId, faultId, { readiness = 55 } = {}) {
+export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now' } = {}) {
   const spec = getSpec(assetId, faultId)
   const asset = MODEL.assets.find(a => a.id === assetId) || { id: assetId, name: assetId }
+  const h = HORIZONS[horizon] || HORIZONS.now
+  const dem = h.demand
+  const preventable = spec.preventable * h.degrade   // aged infra is harder to contain
   const contain = readiness / 100
   // Visuals barely dampen with readiness (the fault still visibly happens); the OUTCOME
   // ($, chargers down, recovery speed) is what a prepared response actually reduces.
-  const visDamp = 1 - spec.preventable * contain * 0.3
-  const outSev = 1 - spec.preventable * contain
+  const visDamp = 1 - preventable * contain * 0.3
+  const outSev = 1 - preventable * contain
   const recStart = spec.peak + Math.round(14 + (1 - contain) * 45)   // high readiness recovers; low readiness stays down
   const cost = MODEL.cost
   const lerp = (a, b, e) => a + (b - a) * e
+  // horizon-aged baseline: demand growth lifts idle load and cuts headroom
+  const base = {
+    ...HEALTHY,
+    'ev:gridLoad': Math.min(90, Math.round(66 + (dem - 1) * 22)),
+    'ev:loadHeadroom': Math.max(6, Math.round(34 - (dem - 1) * 24)),
+    'ev:peakDemand': Math.round(HEALTHY['ev:peakDemand'] * dem),
+    'ev:sessionsActive': Math.round(HEALTHY['ev:sessionsActive'] * Math.min(2, dem)),
+    'ev:chargingPower': Math.round(HEALTHY['ev:chargingPower'] * dem),
+  }
 
   let revenueLost = 0, slaPenalty = 0, kwh = 0, sessions = 0, prevFaulted = 0
   const steps = []
@@ -52,12 +72,12 @@ export function buildScenario(assetId, faultId, { readiness = 55 } = {}) {
     const e = envAt(t, spec.onset, spec.peak, recStart)
     const vEff = e * visDamp
     const oEff = e * outSev
-    const live = { ...HEALTHY }
-    for (const k in spec.peak) live[k] = Math.round(lerp(HEALTHY[k] ?? 0, spec.peak[k], vEff))
+    const live = { ...base }
+    for (const k in spec.peak) live[k] = Math.round(lerp(base[k] ?? 0, spec.peak[k], vEff))
     const faulted = Math.round((spec.faulted || 0) * oEff)
     live['ev:faultedChargers'] = faulted
 
-    const kwDown = spec.kwDown * oEff
+    const kwDown = spec.kwDown * oEff * dem
     revenueLost += kwDown * (1 / 60) * cost.rev_inr_per_kwh
     slaPenalty += spec.stationsDown * oEff * (1 / 60) * cost.penalty_inr_per_hour_down
     kwh += kwDown * (1 / 60)
@@ -93,12 +113,12 @@ export function buildScenario(assetId, faultId, { readiness = 55 } = {}) {
   narration.sort((a, b) => a.t - b.t)
 
   const facts = {
-    site: MODEL.site, asset: asset.name, assetId, fault: FAULTS[faultId]?.label || faultId,
+    site: MODEL.site, horizon: h.label, asset: asset.name, assetId, fault: FAULTS[faultId]?.label || faultId,
     peak_grid_load_pct: Math.max(...steps.map(s => s.live['ev:gridLoad'])),
     chargers_down: spec.faulted || 0, stations_affected: spec.stationsDown, sessions_dropped: sessions,
     kwh_curtailed: Math.round(kwh), revenue_lost_inr: Math.round(revenueLost), sla_penalty_inr: Math.round(slaPenalty),
     total_exposure_inr: Math.round(revenueLost + slaPenalty),
-    preventable_pct: Math.round(spec.preventable * 100), response_readiness_pct: readiness,
+    preventable_pct: Math.round(preventable * 100), response_readiness_pct: readiness,
     recommended_action: spec.rec, tariff_inr_per_kwh: cost.rev_inr_per_kwh, sla_penalty_inr_per_hour: cost.penalty_inr_per_hour_down,
   }
   return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, duration: DUR }

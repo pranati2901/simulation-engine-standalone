@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import EVWorld from '../components/EVWorld.jsx'
 import { api } from '../api.js'
 import { MODEL, assetById, faultsFor, resolveText } from '../ev/networkModel.js'
-import { HEALTHY, buildScenario, inr } from '../ev/scenarios.js'
+import { HEALTHY, HORIZONS, buildScenario, inr } from '../ev/scenarios.js'
 
 const SUGGESTIONS = [
   'What happens if Transformer T1 trips at 5PM?',
@@ -33,6 +33,8 @@ export default function MissionControl() {
   const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [answer, setAnswer] = useState(null)
+  const [horizon, setHorizon] = useState('now')
+  const selRef = useRef(null)
   const scenarioRef = useRef(null); scenarioRef.current = scenario
 
   const groundedAnswer = (scn, q) => {
@@ -41,17 +43,34 @@ export default function MissionControl() {
     api.ask(ctx, q).then(rr => setAnswer(rr.answer || fallback(scn.facts))).catch(() => setAnswer(fallback(scn.facts)))
   }
 
-  const startLive = (assetId, faultId, q) => {
+  const buildStrats = (assetId, faultId, hz) => {
     const list = STRATEGIES.map(s => {
-      const scn = buildScenario(assetId, faultId, { readiness: s.readiness })
+      const scn = buildScenario(assetId, faultId, { readiness: s.readiness, horizon: hz })
       return { ...s, scn, exposure: scn.facts.total_exposure_inr }
     })
     const worst = Math.max(1, ...list.map(s => s.exposure))
     const best = list.reduce((a, b) => (b.exposure < a.exposure ? b : a))
     const doNothing = list.find(s => s.key === 'nothing')
-    setStrategies({ list, worst, bestKey: best.key, baseExposure: doNothing.exposure })
-    setActiveKey('nothing'); setScenario(doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true)
-    groundedAnswer(doNothing.scn, q)
+    return { list, worst, bestKey: best.key, baseExposure: doNothing.exposure, doNothing }
+  }
+
+  const startLive = (assetId, faultId, q) => {
+    selRef.current = { assetId, faultId, q }
+    const st = buildStrats(assetId, faultId, horizon)
+    setStrategies(st)
+    setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true)
+    groundedAnswer(st.doNothing.scn, q)
+  }
+
+  const onHorizon = (hk) => {
+    setHorizon(hk)
+    if (!selRef.current) return
+    const { assetId, faultId, q } = selRef.current
+    const st = buildStrats(assetId, faultId, hk)
+    setStrategies(st)
+    const act = st.list.find(s => s.key === activeKey) || st.doNothing
+    setScenario(act.scn); setIdx(0); setPlaying(true)
+    groundedAnswer(act.scn, `At the ${HORIZONS[hk].label} horizon: ${q}`)
   }
 
   const submit = (text) => {
@@ -132,6 +151,12 @@ export default function MissionControl() {
       <div className="mc-top">
         <div className="mc-brand">◆ SimCore</div>
         <div className="mc-q">“{prompt}”</div>
+        <div className="mc-time">
+          <span>⏱ Time Machine</span>
+          {Object.entries(HORIZONS).map(([k, v]) => (
+            <button key={k} className={horizon === k ? 'on' : ''} onClick={() => onHorizon(k)}>{v.label}</button>
+          ))}
+        </div>
         <button className="mc-new" onClick={() => { setPhase('home'); setPrompt('') }}>＋ New simulation</button>
       </div>
 
