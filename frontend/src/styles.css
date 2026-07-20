@@ -130,6 +130,16 @@ textarea.input:focus { outline: none; border-color: var(--accent); }
 .main { flex: 1; min-width: 0; }
 .topbar2 { display: flex; align-items: center; padding: 13px 24px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; }
 .main .page { max-width: 1080px; }
+.main .page.page-wide { max-width: none; }
+
+/* collapsible sidebar */
+.collapse-btn { background: transparent; border: 1px solid var(--border); border-radius: 9px; width: 34px; height: 34px; flex-shrink: 0; cursor: pointer; font-size: 15px; color: var(--muted); margin-right: 12px; display: grid; place-items: center; }
+.collapse-btn:hover { background: var(--surface-2); color: var(--text); }
+.app.nav-collapsed .sidebar { width: 62px; padding-left: 8px; padding-right: 8px; }
+.app.nav-collapsed .nav-label, .app.nav-collapsed .brand-label, .app.nav-collapsed .side-foot { display: none; }
+.app.nav-collapsed .side-nav a { justify-content: center; gap: 0; padding: 10px 0; }
+.app.nav-collapsed .side-nav a.on::before { left: -8px; }
+.app.nav-collapsed .side-brand { justify-content: center; padding-left: 0; padding-right: 0; }
 @media (max-width: 720px) { .sidebar { width: 60px; } .side-brand { font-size: 0; } .side-nav button { font-size: 0; gap: 0; justify-content: center; } }
 
 /* ── hero stats (command center) ── */

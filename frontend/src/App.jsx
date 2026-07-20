@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useStore } from './store.jsx'
 import Icon from './components/Icon.jsx'
@@ -34,15 +34,17 @@ export default function App() {
   const { domains, domain, setDomain, engineUp } = useStore()
   const loc = useLocation()
   const active = NAV.find(n => loc.pathname.startsWith(n.to)) || NAV[0]
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('simcore_nav_collapsed') === '1')
+  const toggleNav = () => setCollapsed(c => { localStorage.setItem('simcore_nav_collapsed', c ? '0' : '1'); return !c })
 
   return (
-    <div data-mode={active.id} className="app">
+    <div data-mode={active.id} className={`app ${collapsed ? 'nav-collapsed' : ''}`}>
       <aside className="sidebar no-print">
-        <div className="side-brand"><span className="dot">◆</span> SimCore</div>
+        <div className="side-brand"><span className="dot">◆</span> <span className="brand-label">SimCore</span></div>
         <nav className="side-nav">
           {NAV.map(n => (
-            <NavLink key={n.id} to={n.to} className={({ isActive }) => isActive ? 'on' : ''} style={{ '--nav': n.color }}>
-              <Icon name={n.icon} /> {n.label}
+            <NavLink key={n.id} to={n.to} title={n.label} className={({ isActive }) => isActive ? 'on' : ''} style={{ '--nav': n.color }}>
+              <Icon name={n.icon} /> <span className="nav-label">{n.label}</span>
             </NavLink>
           ))}
         </nav>
@@ -51,6 +53,7 @@ export default function App() {
 
       <div className="main">
         <header className="topbar2 no-print">
+          <button className="collapse-btn" onClick={toggleNav} title="Toggle sidebar">☰</button>
           <div>
             <div className="page-title">{active.title}</div>
             <div className="page-sub">{active.sub}</div>
@@ -62,7 +65,7 @@ export default function App() {
           <div className="avatar" title="Signed-in operator">OP</div>
         </header>
 
-        <main className="page">
+        <main className={`page ${active.id === 'simulate' ? 'page-wide' : ''}`}>
           {engineUp === false
             ? <div className="card"><div className="empty">Can’t reach the engine on <span className="mono">:8002</span>. Start it, then reload.</div></div>
             : (
