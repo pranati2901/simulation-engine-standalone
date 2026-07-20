@@ -359,6 +359,15 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
   const lblSolar = makeLabel('solar'); lblSolar.anchor.set(13, 6.2, 8)
   const lblEms = makeLabel('ems'); lblEms.anchor.set(-11, 2.6, -2)
   const lblDcfc = makeLabel('dcfc'); lblDcfc.anchor.set(-6, 3.4, -8)
+
+  // staged cascade bubbles — numbered callouts anchored above assets
+  const stageEls = new Map()
+  const stageAnchors = {
+    transformer: new THREE.Vector3(-24, 7, 2), dcfc: new THREE.Vector3(-6, 5, -6),
+    bess: new THREE.Vector3(-20, 7, -14), ems: new THREE.Vector3(-11, 5, -2),
+    building: new THREE.Vector3(22, 15, 18), solar: new THREE.Vector3(13, 8, 8),
+    grid: new THREE.Vector3(-36, 7, 2),
+  }
   function setLabel(rec, title, val, tone = 'ok') {
     rec.el.innerHTML = `<span class="evw-l-t">${title}</span><span class="evw-l-v evw-${tone}">${val}</span>`
   }
@@ -466,6 +475,17 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
     solar: 210, sessions: 18, faulted: 0, dcfcPower: 148, runaway: 2, cellMax: 33 }
   function update(live) {
     if (!live) return
+    // staged cascade bubbles — sync DOM to the active stages
+    const stages = live.__stages || []
+    const want = new Set(stages.map(s => s.n))
+    for (const [n, rec] of stageEls) { if (!want.has(n)) { rec.el.remove(); stageEls.delete(n) } }
+    for (const s of stages) {
+      if (!stageEls.has(s.n)) {
+        const b = el('div', { class: 'evw-step' }, el('span', { class: 'n' }, String(s.n)), el('span', { class: 't' }, s.label))
+        host.append(b)
+        stageEls.set(s.n, { el: b, anchor: stageAnchors[s.anchor] || stageAnchors.transformer })
+      } else { stageEls.get(s.n).anchor = stageAnchors[s.anchor] || stageEls.get(s.n).anchor }
+    }
     const g = (k, d) => (live[k] == null ? d : live[k])
     dat.transformerTemp = g('ev:transformerTemp', dat.transformerTemp)
     dat.gridLoad = g('ev:gridLoad', dat.gridLoad)
@@ -488,7 +508,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       txa.status = txTone
       txa.metrics = [['Load', '%', Math.round(dat.gridLoad)], ['Temp', '°C', Math.round(dat.transformerTemp)],
         ['Headroom', '%', Math.round(dat.headroom)], ['Peak', 'kW', Math.round(dat.peakDemand)]]
-      const txI = txTone === 'crit' ? 2.8 : txTone === 'warn' ? 1.6 : 0.7
+      const txI = txTone === 'crit' ? 1.7 : txTone === 'warn' ? 1.2 : 0.7
       if (txa.band) { txa.band.material.color.copy(txCol); txa.band.material.emissive.copy(txCol); txa.band.material.emissiveIntensity = txI }
       if (txa.light) { txa.light.material.color.copy(txCol); txa.light.material.emissive.copy(txCol); txa.light.material.emissiveIntensity = txI }
     }
@@ -505,7 +525,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       const on = i < lit
       const col = bessTone === 'crit' && on ? alertRed : bessTone === 'warn' && on ? amber : on ? green : _c.set(0x0a3a30)
       mods[i].material.emissive.copy(col); mods[i].material.color.copy(col)
-      mods[i].material.emissiveIntensity = on ? (bessTone === 'crit' ? 2.6 : 0.9) : 0.25
+      mods[i].material.emissiveIntensity = on ? (bessTone === 'crit' ? 1.7 : 0.9) : 0.25
     }
     setLabel(lblBess, 'BESS', Math.round(dat.bessSoc) + '%', bessTone)
     const bessAsset = selectable.find(s => s.userData.asset.id === 'BESS-A')
@@ -569,7 +589,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
         a.obj.position.set(p.x, 0.02, p.z); a.obj.rotation.y = Math.atan2(tan.x, tan.z)
       } else if (a.kind === 'led') {
         const cr = a.obj.userData && a.obj.userData.crit
-        a.obj.material.emissiveIntensity = (cr ? 2.8 : 1.2) + Math.sin(t * (cr ? 10 : 4) + a.obj.position.x) * (cr ? 1.4 : 0.7)
+        a.obj.material.emissiveIntensity = (cr ? 1.6 : 1.2) + Math.sin(t * (cr ? 9 : 4) + a.obj.position.x) * (cr ? 0.5 : 0.7)
       } else if (a.kind === 'cable') {
         a.obj.material.emissiveIntensity = 0.7 + Math.abs(Math.sin(t * 3)) * 1.2
       } else if (a.kind === 'flow') {
@@ -589,6 +609,15 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       _v.copy(rec.anchor).project(camera)
       const vis = _v.z < 1
       rec.el.style.display = vis ? 'block' : 'none'
+      if (vis) {
+        rec.el.style.left = ((_v.x * 0.5 + 0.5) * W()) + 'px'
+        rec.el.style.top = ((-_v.y * 0.5 + 0.5) * H()) + 'px'
+      }
+    }
+    for (const [, rec] of stageEls) {
+      _v.copy(rec.anchor).project(camera)
+      const vis = _v.z < 1
+      rec.el.style.display = vis ? 'flex' : 'none'
       if (vis) {
         rec.el.style.left = ((_v.x * 0.5 + 0.5) * W()) + 'px'
         rec.el.style.top = ((-_v.y * 0.5 + 0.5) * H()) + 'px'

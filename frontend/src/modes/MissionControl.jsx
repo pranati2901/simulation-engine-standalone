@@ -119,6 +119,7 @@ export default function MissionControl() {
   const seek = (t) => { setPlaying(false); setIdx(Math.round((t / scenario.duration) * (scenario.steps.length - 1))) }
   const crisis = cur ? Math.max(0, Math.min(1, Math.max((cur.live['ev:gridLoad'] - 88) / 14, (cur.live['ev:thermalRunawayRisk'] - 40) / 40, cur.metrics.faulted > 0 ? 0.55 : 0))) : 0
   const narr = scenario ? scenario.narration.filter(n => n.t <= (cur?.t ?? 0)) : []
+  const stages = scenario ? scenario.sequence.map((s, i) => ({ ...s, n: i + 1 })).filter(s => s.at * scenario.duration <= (cur?.t ?? 0)) : []
 
   if (phase === 'home') return (
     <div className="mc mc-home">
@@ -168,7 +169,7 @@ export default function MissionControl() {
 
         <main className="mc-center">
           <div className="mc-stage">
-            <EVWorld live={live} onAskAI={onAskAI} height={420} />
+            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} height={520} />
             <div className="mc-vignette" style={{ opacity: crisis }} />
             {narr.length > 0 && <div className="mc-narrate">▸ {narr[narr.length - 1].text}</div>}
           </div>

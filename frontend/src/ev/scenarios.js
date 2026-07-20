@@ -33,6 +33,22 @@ const SPEC = {
 }
 const getSpec = (a, f) => SPEC[`${a}:${f}`] || SPEC['TX-1:overload']
 
+// ordered cascade — each stage lights an asset red + pops a numbered bubble above it.
+// `at` is the fraction of the timeline; `anchor` maps to a 3-D asset in the twin.
+const SEQ = {
+  'TX-1:overload': [{ at: 0.16, anchor: 'transformer', label: 'Transformer T1 overloads' }, { at: 0.34, anchor: 'dcfc', label: 'DC chargers trip offline' }, { at: 0.52, anchor: 'ems', label: 'EMS sheds non-critical load' }, { at: 0.70, anchor: 'building', label: 'Mall supply curtailed' }],
+  'TX-1:overheat': [{ at: 0.20, anchor: 'transformer', label: 'Transformer overheating' }, { at: 0.42, anchor: 'dcfc', label: 'DC-fast power throttled' }, { at: 0.64, anchor: 'ems', label: 'EMS derates the site' }],
+  'F-1:overcurrent_trip': [{ at: 0.14, anchor: 'transformer', label: 'Feeder F-1 overcurrent' }, { at: 0.32, anchor: 'dcfc', label: 'DC bank trips offline' }, { at: 0.55, anchor: 'ems', label: 'Load rerouted to F-2' }],
+  'F-2:overcurrent_trip': [{ at: 0.14, anchor: 'ems', label: 'Feeder F-2 overcurrent' }, { at: 0.36, anchor: 'dcfc', label: 'AC bays drop offline' }],
+  'DCFC:charger_offline': [{ at: 0.12, anchor: 'dcfc', label: 'DC chargers go offline' }, { at: 0.42, anchor: 'ems', label: 'Sessions rerouted' }],
+  'DCFC:connector_fault': [{ at: 0.12, anchor: 'dcfc', label: 'Connector fault detected' }, { at: 0.40, anchor: 'dcfc', label: 'Bay locked out' }],
+  'BESS-A:thermal_runaway': [{ at: 0.16, anchor: 'bess', label: 'BESS thermal-runaway risk' }, { at: 0.36, anchor: 'bess', label: 'Pack isolated' }, { at: 0.56, anchor: 'transformer', label: 'Grid must cover the load' }, { at: 0.74, anchor: 'ems', label: 'Demand-charge spike' }],
+  'BESS-A:offline': [{ at: 0.16, anchor: 'bess', label: 'BESS goes offline' }, { at: 0.42, anchor: 'transformer', label: 'Grid carries the peak' }],
+  'GRID:brownout': [{ at: 0.12, anchor: 'grid', label: 'Grid brownout' }, { at: 0.32, anchor: 'bess', label: 'BESS + solar ride-through' }, { at: 0.54, anchor: 'dcfc', label: 'DC-fast curtailed' }],
+  'GRID:supply_loss': [{ at: 0.10, anchor: 'grid', label: 'Grid supply lost' }, { at: 0.28, anchor: 'bess', label: 'Site islands on BESS' }, { at: 0.48, anchor: 'dcfc', label: 'DC chargers shut down' }, { at: 0.70, anchor: 'building', label: 'Mall on backup only' }],
+}
+const getSeq = (a, f) => SEQ[`${a}:${f}`] || SEQ['TX-1:overload']
+
 const DUR = 90
 function envAt(t, onset, peak, recStart) {
   if (t <= 0) return 0
@@ -121,7 +137,7 @@ export function buildScenario(assetId, faultId, { readiness = 55, horizon = 'now
     preventable_pct: Math.round(preventable * 100), response_readiness_pct: readiness,
     recommended_action: spec.rec, tariff_inr_per_kwh: cost.rev_inr_per_kwh, sla_penalty_inr_per_hour: cost.penalty_inr_per_hour_down,
   }
-  return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, duration: DUR }
+  return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, sequence: getSeq(assetId, faultId), duration: DUR }
 }
 
 export function inr(v) {
