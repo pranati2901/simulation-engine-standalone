@@ -32,4 +32,5 @@ export const api = {
     req('POST', '/runs/monte-carlo', { scenario_id: scenarioId, config: cfg(domain, 60), iterations }),
   author: (domain, prompt) => req('POST', '/scenarios/author', { domain, prompt }),
   ask: (context, question) => req('POST', '/analyst/ask', { context, question }),
+  plan: (question, assets) => req('POST', '/analyst/plan', { question, assets }),
 }

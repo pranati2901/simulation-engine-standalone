@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EV Scenario Engine — Data Requirements</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1a2233; font-size: 11px; line-height: 1.5; margin: 0; }
+  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -.3px; }
+  h2 { font-size: 13px; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #7c3aed; color: #4c1d95; }
+  .sub { color: #6b7280; font-size: 11.5px; margin: 0 0 4px; }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 3px solid #7c3aed; padding-bottom: 10px; }
+  .brand .who { font-weight: 800; color: #7c3aed; letter-spacing: .5px; }
+  .lead { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 13px; margin: 14px 0; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; }
+  th { text-align: left; background: #f3f4f6; font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; color: #4b5563; padding: 6px 8px; border: 1px solid #e5e7eb; }
+  td { padding: 6px 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+  td.k { font-weight: 700; white-space: nowrap; color: #111827; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+  .pill { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 20px; padding: 1px 7px; font-size: 9px; font-weight: 700; }
+  .note { color: #6b7280; font-size: 10px; }
+  .foot { margin-top: 22px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9.5px; }
+  ul { margin: 4px 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <div>
+      <h1>EV Charging — Scenario &amp; Resilience Engine</h1>
+      <p class="sub">Data we would need from your side to model your network</p>
+    </div>
+    <div class="who">NextXR · SimCore</div>
+  </div>
+
+  <div class="lead">
+    <b>Purpose.</b> To simulate faults and cascades across your charging network — and quantify the revenue, energy and SLA impact — the engine builds a live model of your real assets. Below is the minimal data set required. Almost all of it is <b>standard OCPP / CMS export</b>; nothing bespoke. A pilot can start with as few as <b>3–5 stations</b> and expand from there.
+  </div>
+
+  <h2>1 · Asset inventory <span class="pill">from your CMS / CPMS</span></h2>
+  <table>
+    <tr><th>Data</th><th>Example fields</th><th>Why the engine needs it</th></tr>
+    <tr><td class="k">Stations</td><td><code>id, name, location, site type</code></td><td>Each station becomes a node in the model</td></tr>
+    <tr><td class="k">Chargers</td><td><code>id, OCPP id, AC/DC, power (kW), connector, status</code></td><td>Defines what can fail and its capacity</td></tr>
+  </table>
+
+  <h2>2 · Electrical topology <span class="pill">site design / single-line diagram</span></h2>
+  <table>
+    <tr><th>Data</th><th>Example fields</th><th>Why the engine needs it</th></tr>
+    <tr><td class="k">Connectivity</td><td><code>charger → feeder → transformer → substation</code></td><td>Defines the <b>cascade</b> — what goes down when an upstream asset trips</td></tr>
+    <tr><td class="k">Ratings</td><td><code>transformer kVA, feeder capacity kW, BESS kWh/kW</code></td><td>Sets overload / thermal thresholds</td></tr>
+  </table>
+
+  <h2>3 · Operational telemetry <span class="pill">OCPP + meters</span></h2>
+  <table>
+    <tr><th>Data</th><th>Example fields</th><th>Why the engine needs it</th></tr>
+    <tr><td class="k">Sessions</td><td><code>StatusNotification, MeterValues (kWh), start/stop</code></td><td>Utilisation &amp; revenue base per station</td></tr>
+    <tr><td class="k">Load &amp; thermal</td><td><code>feeder load kW, transformer / BESS temp °C</code></td><td>Triggers for overload and thermal runaway</td></tr>
+  </table>
+
+  <h2>4 · Fault history <span class="pill">monitoring / CMMS</span></h2>
+  <table>
+    <tr><th>Data</th><th>Example fields</th><th>Why the engine needs it</th></tr>
+    <tr><td class="k">Past incidents</td><td><code>asset, fault type, count (12 mo), mean repair hours</code></td><td>Sets <b>real failure probabilities &amp; repair times</b> — not guesses</td></tr>
+  </table>
+
+  <h2>5 · Commercial data <span class="pill">utility &amp; CPO contracts</span></h2>
+  <table>
+    <tr><th>Data</th><th>Example fields</th><th>Why the engine needs it</th></tr>
+    <tr><td class="k">Tariffs</td><td><code>time-of-use energy price, demand charge (per kW)</code></td><td>Real cost of curtailment &amp; demand spikes</td></tr>
+    <tr><td class="k">Revenue</td><td><code>price to driver per kWh / per session</code></td><td>Revenue lost when a station is down</td></tr>
+    <tr><td class="k">SLA terms</td><td><code>uptime target, penalty per hour down, reimbursements</code></td><td>Penalty exposure when uptime is breached</td></tr>
+  </table>
+
+  <h2>6 · Demand forecast <span class="pill">optional — you already produce this</span></h2>
+  <p class="note">Your existing demand forecast feeds the engine directly as the stress-test input (e.g. "next summer peak"), so the simulation runs against your own projections.</p>
+
+  <h2>Format, scope &amp; security</h2>
+  <ul>
+    <li><b>Format:</b> CSV or JSON export, or a read-only API. We are hardware-agnostic and speak standard OCPP — no changes to your stack.</li>
+    <li><b>Minimum to start:</b> items 1, 2 and 5 for 3–5 stations. Items 3 and 4 sharpen accuracy but the model runs without a full history.</li>
+    <li><b>Security:</b> read-only access; data can be anonymised (station codes, not addresses). No control commands are ever issued to your chargers.</li>
+  </ul>
+
+  <div class="foot">
+    NextXR · SimCore — EV Charging Scenario &amp; Resilience Engine · Data requirements v1 · Confidential
+  </div>
+</body>
+</html>
