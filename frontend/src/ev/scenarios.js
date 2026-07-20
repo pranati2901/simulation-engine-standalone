@@ -77,6 +77,21 @@ export function buildScenario(assetId, faultId, { readiness = 55 } = {}) {
     })
   }
 
+  // live operator narration — fires the first time each threshold is crossed
+  const narration = []; const seen = {}
+  const cue = (k, t, text) => { if (!seen[k]) { seen[k] = true; narration.push({ t, text }) } }
+  for (const s of steps) {
+    const L = s.live
+    if (L['ev:gridLoad'] >= 85) cue('stress', s.t, `${asset.name} load is climbing past safe limits.`)
+    if (L['ev:gridLoad'] >= 95) cue('crit', s.t, `Transformer overloaded — protection relay at risk.`)
+    if (L['ev:thermalRunawayRisk'] >= 40) cue('runaway', s.t, `BESS thermal-runaway risk rising — isolate the pack.`)
+    if (L['ev:faultedChargers'] > 0) cue('fault', s.t, `${L['ev:faultedChargers']} charger(s) dropping offline — sessions interrupted.`)
+    if (L['ev:bessPower'] >= 80) cue('bess', s.t, `BESS is now supporting the site load.`)
+    if (s.metrics.revenueLost > 0) cue('rev', s.t, `Revenue loss has begun accruing.`)
+  }
+  cue('recover', recStart, `Load rerouted — recovery beginning.`)
+  narration.sort((a, b) => a.t - b.t)
+
   const facts = {
     site: MODEL.site, asset: asset.name, assetId, fault: FAULTS[faultId]?.label || faultId,
     peak_grid_load_pct: Math.max(...steps.map(s => s.live['ev:gridLoad'])),
@@ -86,7 +101,7 @@ export function buildScenario(assetId, faultId, { readiness = 55 } = {}) {
     preventable_pct: Math.round(spec.preventable * 100), response_readiness_pct: readiness,
     recommended_action: spec.rec, tariff_inr_per_kwh: cost.rev_inr_per_kwh, sla_penalty_inr_per_hour: cost.penalty_inr_per_hour_down,
   }
-  return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, duration: DUR }
+  return { title: `${asset.name} — ${FAULTS[faultId]?.label || faultId}`, steps, facts, narration, duration: DUR }
 }
 
 export function inr(v) {

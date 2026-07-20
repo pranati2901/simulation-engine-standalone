@@ -98,6 +98,8 @@ export default function MissionControl() {
   const f = scenario?.facts
   const events = scenario ? scenario.steps.flatMap(s => s.events) : []
   const seek = (t) => { setPlaying(false); setIdx(Math.round((t / scenario.duration) * (scenario.steps.length - 1))) }
+  const crisis = cur ? Math.max(0, Math.min(1, Math.max((cur.live['ev:gridLoad'] - 88) / 14, (cur.live['ev:thermalRunawayRisk'] - 40) / 40, cur.metrics.faulted > 0 ? 0.55 : 0))) : 0
+  const narr = scenario ? scenario.narration.filter(n => n.t <= (cur?.t ?? 0)) : []
 
   if (phase === 'home') return (
     <div className="mc mc-home">
@@ -140,7 +142,11 @@ export default function MissionControl() {
         </aside>
 
         <main className="mc-center">
-          <EVWorld live={live} onAskAI={onAskAI} height={420} />
+          <div className="mc-stage">
+            <EVWorld live={live} onAskAI={onAskAI} height={420} />
+            <div className="mc-vignette" style={{ opacity: crisis }} />
+            {narr.length > 0 && <div className="mc-narrate">▸ {narr[narr.length - 1].text}</div>}
+          </div>
           <div className="mc-metrics">
             <div><div className="v" style={{ color: '#fb7185' }}>{inr(m.revenueLost)}</div><div className="l">revenue lost</div></div>
             <div><div className="v" style={{ color: '#fb7185' }}>{inr(m.slaPenalty)}</div><div className="l">SLA penalty</div></div>
