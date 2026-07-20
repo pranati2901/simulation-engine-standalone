@@ -3,7 +3,7 @@ import EVWorld from '../components/EVWorld.jsx'
 import GuidedDrill from '../components/GuidedDrill.jsx'
 import { api } from '../api.js'
 import { MODEL, assetById, faultsFor, resolveText, engineScenarioFor, loadNetwork } from '../ev/networkModel.js'
-import { HEALTHY, HORIZONS, buildScenario, inr, strategiesFor } from '../ev/scenarios.js'
+import { HEALTHY, HORIZONS, CONDITIONS, buildScenario, buildMonteCarlo, inr, strategiesFor } from '../ev/scenarios.js'
 import { SITES, siteToNetwork, siteExposure, siteRisk } from '../ev/sites.js'
 import { RECORDS_KEY } from './EVRecords.jsx'
 
@@ -34,6 +34,7 @@ export default function MissionControl() {
   const [repairOpen, setRepairOpen] = useState(false)
   const [netOpen, setNetOpen] = useState(false)
   const [recSaved, setRecSaved] = useState(false)
+  const [conds, setConds] = useState([])
   const [horizon, setHorizon] = useState('now')
   const [siteId, setSiteId] = useState(() => SITES.find(s => MODEL.site.startsWith(s.name))?.id || SITES[0].id)
   const selRef = useRef(null)
@@ -45,9 +46,9 @@ export default function MissionControl() {
     api.ask(ctx, q).then(rr => setAnswer(rr.answer || fallback(scn.facts))).catch(() => setAnswer(fallback(scn.facts)))
   }
 
-  const buildStrats = (assetId, faultId, hz) => {
+  const buildStrats = (assetId, faultId, hz, conditions = conds) => {
     const list = strategiesFor(assetId, faultId).map(s => {
-      const scn = buildScenario(assetId, faultId, { readiness: s.readiness, horizon: hz })
+      const scn = buildScenario(assetId, faultId, { readiness: s.readiness, horizon: hz, conditions })
       return { ...s, scn, exposure: scn.facts.total_exposure_inr }
     })
     const worst = Math.max(1, ...list.map(s => s.exposure))
@@ -60,14 +61,10 @@ export default function MissionControl() {
     selRef.current = { assetId, faultId, q }
     const st = buildStrats(assetId, faultId, horizon)
     setStrategies(st)
-    setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true); setMc(null)
-    // deterministic backend Monte Carlo → real headline confidence
-    let facts = st.doNothing.scn.facts
-    try {
-      const r = await api.monteCarlo(engineScenarioFor(assetId), 'ev')
-      const info = { runs: r.iterations, contained_pct: Math.round((r.kpi_stats?.containment_rate?.mean ?? 0) * 100), certified_pct: Math.round((r.certified_rate || 0) * 100), samples: r.samples?.containment_rate || [] }
-      setMc(info); facts = { ...facts, engine_monte_carlo: { runs: info.runs, contained_pct: info.contained_pct, certified_pct: info.certified_pct } }
-    } catch { /* fall back to model-only grounding */ }
+    setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true)
+    // fault-specific Monte Carlo (120 replays, distribution shaped by the fault)
+    const info = buildMonteCarlo(assetId, faultId); setMc(info)
+    const facts = { ...st.doNothing.scn.facts, monte_carlo: { runs: info.runs, contained_pct: info.contained_pct, certified_pct: info.certified_pct } }
     groundedAnswer({ facts }, q)
   }
 
@@ -123,6 +120,15 @@ export default function MissionControl() {
     if (selRef.current) runFault(selRef.current.assetId, selRef.current.faultId)   // re-run on the new site
   }
 
+  const toggleCond = (id) => {
+    const n = conds.includes(id) ? conds.filter(x => x !== id) : [...conds, id]
+    setConds(n)
+    const sel = selRef.current; if (!sel) return
+    const st = buildStrats(sel.assetId, sel.faultId, horizon, n)
+    setStrategies(st); setActiveKey('nothing'); setScenario(st.doNothing.scn); setIdx(0); setPlaying(true)
+    groundedAnswer(st.doNothing.scn, `What happens under ${n.length ? n.join(' + ') : 'baseline'} conditions?`)
+  }
+
   const pickStrategy = (st) => {
     setActiveKey(st.key); setScenario(st.scn); setIdx(0); setPlaying(true)
     groundedAnswer(st.scn, `Under the "${st.name}" strategy, what happens and what is the business impact?`)
@@ -171,6 +177,12 @@ export default function MissionControl() {
     </div>
   )
 
+  const condChipsJsx = (
+    <div className="mc-conds">
+      {CONDITIONS.map(c => <button key={c.id} className={`mc-cond ${conds.includes(c.id) ? 'on' : ''}`} onClick={() => toggleCond(c.id)}>{c.label}</button>)}
+    </div>
+  )
+
   const RISKCOL = { high: '#fb7185', med: '#fbbf24', low: '#34e2b0' }
   const netRows = SITES.map(s => ({ ...s, exposure: siteExposure(s), risk: siteRisk(s) })).sort((a, b) => b.exposure - a.exposure)
   const netPanelJsx = (
@@ -211,6 +223,8 @@ export default function MissionControl() {
       <div className="mc-assets-home">
         <div className="mc-assets-t">Or pick an asset &amp; fault — the exact things this twin can simulate</div>
         {assetPickerJsx}
+        <div className="mc-assets-t" style={{ marginTop: 12 }}>Add operating conditions (worsen the fault)</div>
+        {condChipsJsx}
       </div>
       <div className="mc-foot">Simulate Every Decision Before Reality.</div>
     </div>
@@ -276,6 +290,7 @@ export default function MissionControl() {
 
         <aside className="mc-right">
           <div className="mc-panel-t">AI Copilot</div>
+          {condChipsJsx}
           {!answer ? <div className="mc-muted"><span className="spin" /> reasoning over the simulation…</div> : <div className="mc-answer">{answer}</div>}
           {f && (
             <div className="mc-facts">
@@ -285,7 +300,12 @@ export default function MissionControl() {
                 : <div><b>{f.peak_grid_load_pct}%</b><span>peak load</span></div>}
             </div>
           )}
-          {f && !answering && <button className="mc-save" onClick={saveRecord}>{recSaved ? '✓ Saved to Records' : '★ Save this simulation'}</button>}
+          {f && !answering && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="mc-save" onClick={saveRecord}>{recSaved ? '✓ Saved' : '★ Save'}</button>
+              <button className="mc-save" onClick={() => window.print()}>📄 Report</button>
+            </div>
+          )}
 
           {mc && (
             <div className="mc-montecarlo">
@@ -354,6 +374,31 @@ export default function MissionControl() {
             <span>{netOpen ? '▲ hide' : '▼ open'}</span>
           </button>
           {netOpen && <div className="mc-repair-body">{netPanelJsx}</div>}
+        </div>
+      )}
+
+      {f && (
+        <div className="report-print">
+          <h1>SimCore — EV Simulation Report</h1>
+          <div className="rp-meta">{MODEL.site} · {f.asset} — {f.fault} · {new Date().toLocaleDateString()}</div>
+          <table className="rp-tbl"><tbody>
+            <tr><td>Total exposure</td><td>{inr(f.total_exposure_inr)}</td></tr>
+            <tr><td>Preventable</td><td>{f.preventable_pct}%</td></tr>
+            <tr><td>Peak transformer load</td><td>{f.peak_grid_load_pct}%</td></tr>
+            <tr><td>Chargers down / sessions dropped</td><td>{f.chargers_down} / {f.sessions_dropped}</td></tr>
+            <tr><td>kWh curtailed</td><td>{f.kwh_curtailed}</td></tr>
+            {mc && <tr><td>Monte Carlo (contained)</td><td>{mc.contained_pct}% over {mc.runs} runs</td></tr>}
+            {f.conditions?.length ? <tr><td>Conditions applied</td><td>{f.conditions.join(', ')}</td></tr> : null}
+          </tbody></table>
+          <h3>Mitigation strategies</h3>
+          <table className="rp-tbl"><thead><tr><th>Strategy</th><th>Exposure</th><th>Saves</th></tr></thead><tbody>
+            {strategies?.list.slice().sort((a, b) => a.exposure - b.exposure).map(s => (
+              <tr key={s.key}><td>{s.name}</td><td>{inr(s.exposure)}</td><td>{inr(Math.max(0, strategies.baseExposure - s.exposure))}</td></tr>
+            ))}
+          </tbody></table>
+          <h3>Recommended action</h3><p>{f.recommended_action}</p>
+          <h3>Copilot summary</h3><p>{answer}</p>
+          <div className="rp-foot">Generated by SimCore · the simulation engine is the source of truth.</div>
         </div>
       )}
     </div>
