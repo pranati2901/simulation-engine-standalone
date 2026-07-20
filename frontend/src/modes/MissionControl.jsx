@@ -63,14 +63,14 @@ export default function MissionControl() {
     return { list, worst, bestKey: best.key, baseExposure: doNothing.exposure, doNothing }
   }
 
-  const startLive = async (assetId, faultId, q) => {
+  const startLive = async (assetId, faultId, q, answerFacts = null) => {
     selRef.current = { assetId, faultId, q }
     const st = buildStrats(assetId, faultId, horizon)
     setStrategies(st)
     setActiveKey('nothing'); setScenario(st.doNothing.scn); setPhase('live'); setIdx(0); setPlaying(true)
     // fault-specific Monte Carlo (120 replays, distribution shaped by the fault)
     const info = buildMonteCarlo(assetId, faultId); setMc(info)
-    const facts = { ...st.doNothing.scn.facts, monte_carlo: { runs: info.runs, contained_pct: info.contained_pct } }
+    const facts = answerFacts || { ...st.doNothing.scn.facts, monte_carlo: { runs: info.runs, contained_pct: info.contained_pct } }
     groundedAnswer({ facts }, q)
   }
 
@@ -154,10 +154,18 @@ export default function MissionControl() {
     if (multiSel.length < 2) return
     const primary = multiSel[0]
     setPrompt(`${multiSel.length} concurrent faults`); setPhase('thinking'); setReasonStep(0)
-    setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null)
-    api.evMultifault(multiSel.map(m => ({ assetId: m.assetId, faultId: m.faultId })), conds).then(r => setMultiInfo(r)).catch(() => setMultiInfo(null))
+    setAnswer(null); setScenario(null); setStrategies(null); setMc(null); setOptResult(null); setMultiInfo(null)
+    const miP = api.evMultifault(multiSel.map(m => ({ assetId: m.assetId, faultId: m.faultId })), conds).then(r => { setMultiInfo(r); return r }).catch(() => null)
     let s = 0
-    const iv = setInterval(() => { s++; setReasonStep(s); if (s >= REASONING.length) { clearInterval(iv); startLive(primary.assetId, primary.faultId, `${multiSel.length} concurrent faults`) } }, 430)
+    const iv = setInterval(async () => {
+      s++; setReasonStep(s)
+      if (s >= REASONING.length) {
+        clearInterval(iv)
+        const mi = await miP
+        const cf = mi ? { site: MODEL.site, scenario: `${multiSel.length} concurrent faults`, faults: multiSel.map(m => m.label), combined_exposure_inr: mi.combined_exposure, if_separate_inr: mi.base_exposure, compounding_pct: mi.interaction_pct, breakdown: mi.parts } : null
+        startLive(primary.assetId, primary.faultId, `What happens with ${multiSel.length} concurrent faults (${multiSel.map(m => m.label).join(', ')})?`, cf)
+      }
+    }, 430)
   }
 
   const pickStrategy = (st) => {
@@ -174,10 +182,10 @@ export default function MissionControl() {
   }
 
   useEffect(() => {
-    const ff = scenario?.facts
-    if (openTab === 'optimize' && ff && !optResult && !optBusy) {
+    const sel = selRef.current
+    if (openTab === 'optimize' && sel && !optResult && !optBusy) {
       setOptBusy(true)
-      api.evOptimize(ff.assetId, ff.faultId, conds).then(r => setOptResult(r)).catch(() => {}).finally(() => setOptBusy(false))
+      api.evOptimize(sel.assetId, sel.faultId, conds).then(r => setOptResult(r)).catch(() => {}).finally(() => setOptBusy(false))
     }
   }, [openTab, scenario, optResult, optBusy, conds]) // eslint-disable-line
 
