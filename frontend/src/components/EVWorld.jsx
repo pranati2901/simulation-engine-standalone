@@ -3,7 +3,7 @@ import { createEVWorld } from '../scene/evworld.js'
 
 // EVWorld — mounts the Three.js "living energy site" (Gaadin charging hub) and streams a
 // telemetry `live` frame onto it. `onAskAI(asset)` is wired to our grounded copilot.
-export default function EVWorld({ live, onAskAI, height = 460 }) {
+export default function EVWorld({ live, onAskAI, focusId, height = 460 }) {
   const hostRef = useRef(null)
   const worldRef = useRef(null)
   const askRef = useRef(onAskAI)
@@ -22,6 +22,11 @@ export default function EVWorld({ live, onAskAI, height = 460 }) {
     const w = worldRef.current
     if (w && w.update) { try { w.update(live || {}) } catch (e) { console.error('evworld update failed', e) } }
   }, [live])
+
+  useEffect(() => {
+    const w = worldRef.current
+    if (w && w.focusAsset) { try { w.focusAsset(focusId || null) } catch { /* ignore */ } }
+  }, [focusId])
 
   return <div ref={hostRef} className="hero3d scene3d-host evw-host"
     style={{ height, position: 'relative', padding: 0, overflow: 'hidden', borderRadius: 16 }} />

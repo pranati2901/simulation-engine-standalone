@@ -128,6 +128,8 @@ export default function MissionControl() {
   const crisis = cur ? Math.max(0, Math.min(1, Math.max((cur.live['ev:gridLoad'] - 88) / 14, (cur.live['ev:thermalRunawayRisk'] - 40) / 40, cur.metrics.faulted > 0 ? 0.55 : 0))) : 0
   const narr = scenario ? scenario.narration.filter(n => n.t <= (cur?.t ?? 0)) : []
   const stages = scenario ? scenario.sequence.map((s, i) => ({ ...s, n: i + 1 })).filter(s => s.at * scenario.duration <= (cur?.t ?? 0)) : []
+  const SCENE_ID = { 'TX-1': 'TX-1', 'BESS-A': 'BESS-A', 'DCFC': 'DCFC-01', 'F-1': 'EMS-1', 'F-2': 'EMS-1', 'GRID': 'TX-1' }
+  const focusId = f ? (SCENE_ID[f.assetId] || 'TX-1') : null
 
   if (phase === 'home') return (
     <div className="mc mc-home">
@@ -177,7 +179,7 @@ export default function MissionControl() {
 
         <main className="mc-center">
           <div className="mc-stage">
-            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} height={520} />
+            <EVWorld live={{ ...live, __stages: stages }} onAskAI={onAskAI} focusId={focusId} height={520} />
             <div className="mc-vignette" style={{ opacity: crisis }} />
             {narr.length > 0 && <div className="mc-narrate">▸ {narr[narr.length - 1].text}</div>}
           </div>

@@ -444,6 +444,15 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
     clearSel(); selected = g
     if (g) { selBox = new THREE.BoxHelper(g, 0x10b981); scene.add(selBox); openInspector(g.userData.asset) }
   }
+  // explainable highlight — outline the asset a simulation/answer is about, in pulsing red
+  let focusBox = null
+  function focusAsset(id) {
+    if (focusBox) { scene.remove(focusBox); focusBox.geometry.dispose(); focusBox = null }
+    if (!id) return
+    const g = selectable.find(s => s.userData.asset.id === id)
+    if (!g) return
+    focusBox = new THREE.BoxHelper(g, 0xff2020); focusBox.material.transparent = true; scene.add(focusBox)
+  }
   renderer.domElement.addEventListener('pointerdown', ev => {
     const g = pickAt(ev.clientX, ev.clientY); if (g) selectAsset(g)
   })
@@ -624,6 +633,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
       }
     }
     if (selBox) selBox.update()
+    if (focusBox) { focusBox.update(); focusBox.material.opacity = 0.45 + 0.45 * Math.abs(Math.sin(t * 4)) }
     controls.update()
     if (composer) composer.render(); else renderer.render(scene, camera)
   }
@@ -633,7 +643,7 @@ export function createEVWorld(host, { onAskAI, onReady } = {}) {
   window.addEventListener('resize', onResize)
 
   return {
-    update,
+    update, focusAsset,
     dispose() {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
