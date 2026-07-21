@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -58,15 +58,64 @@ def health():
     return {"status": "ok", "app": settings.app_name}
 
 
+# ── Serving the frontend ────────────────────────────────────────────────────────
+#
+# One process serves the API AND the built React frontend, mirroring NextXR. That also
+# makes this the origin the hub loads the federated remote from:
+#   {ENGINE}/assets/remoteEntry.js  +  {ENGINE}/assets/style.css
+#
+# Cross-origin, so the hub can only fetch remoteEntry.js if this engine sends CORS headers
+# for the hub's origin — set GOALCERT_CORS_ORIGINS. `cors_origins` defaults to an EMPTY
+# list, and note allow_credentials=True with "*" is rejected by browsers, so the hub origin
+# must be listed explicitly.
+#
+# The dist/ mount is conditional: `npm run build` may not have run yet (fresh clone, CI
+# backend-only job). StaticFiles raises at import time if the directory is missing, which
+# would take the whole API down over a missing frontend build — so fall back to the old
+# static placeholder instead of refusing to start.
+DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+_HAS_DIST = (DIST_DIR / "index.html").is_file()
+
+if _HAS_DIST:
+    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+
+
 @app.get("/")
 def index():
-    """Serves the minimal frontend at http://127.0.0.1:8000/ — a single static HTML
-    page (app/static/index.html) that calls the API routes above with fetch(). This is
-    a placeholder to prove the engine end-to-end in a browser, not the real Hub UI —
-    the real UI (digital twin -> agents -> scenario engine flow) will live elsewhere
-    once the three repos are merged.
+    """The built Scenario Engine SPA, or the legacy placeholder if it isn't built yet.
+
+    The placeholder (app/static/index.html) is a single static page that calls the API
+    routes above with fetch() — enough to prove the engine end-to-end in a browser, but
+    not the real UI.
     """
+    if _HAS_DIST:
+        return FileResponse(DIST_DIR / "index.html")
     return FileResponse(STATIC_DIR / "index.html")
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# ── SPA history fallback ────────────────────────────────────────────────────────
+#
+# The standalone frontend is a client-routed SPA: /dashboard, /builder, /simulation
+# exist only in the browser's router. Without this, loading or refreshing any of them
+# hits FastAPI, matches no route, and 404s — the app only worked at "/".
+#
+# Registered LAST on purpose. FastAPI matches in declaration order, so every API router
+# above still wins; this only ever sees paths nothing else claimed. Unknown /api-ish
+# paths therefore return index.html rather than a JSON 404 — the standard SPA trade-off,
+# and harmless here because the hub never routes through this fallback (it mounts the
+# federated remote and calls the API through its own gateway).
+if _HAS_DIST:
+    @app.get("/{full_path:path}")
+    def spa_fallback(full_path: str):
+        # Let genuinely missing assets 404 as assets. Returning index.html for a missing
+        # .js/.css makes the browser report a confusing MIME-type error instead of the
+        # plain 404 that tells you the build is stale.
+        candidate = (DIST_DIR / full_path).resolve()
+        if candidate.is_file() and candidate.is_relative_to(DIST_DIR.resolve()):
+            return FileResponse(candidate)
+        if "." in Path(full_path).name:
+            raise HTTPException(status_code=404, detail=f"Not found: {full_path}")
+        return FileResponse(DIST_DIR / "index.html")

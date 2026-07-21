@@ -1,13 +1,16 @@
 // api.js — the ONLY place that talks to the engine. Swap this adapter and the same UI
-// runs anywhere (standalone here, or through the Hub gateway later). Requests go to
-// /engine/* which Vite proxies to the FastAPI engine.
-const BASE = '/engine'
-const KEY = import.meta.env.VITE_API_KEY || ''
+// runs anywhere. Where the engine lives and how we authenticate is NOT decided here:
+// config.js owns that, because it differs per deployment (dev proxy /engine, engine-served
+// build at root, hub gateway /api/scenario). Hard-coding '/engine' here is what made the
+// federated build call the HUB's origin and fail.
+import { apiBase, authHeaders } from './config.js'
 
 async function req(method, path, body) {
-  const res = await fetch(BASE + path, {
+  const res = await fetch(apiBase() + path, {
     method,
-    headers: { 'Content-Type': 'application/json', 'X-API-Key': KEY },
+    // credentials: the hub gateway authenticates by cookie, so the request must carry it.
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: body != null ? JSON.stringify(body) : undefined,
   })
   if (!res.ok) {

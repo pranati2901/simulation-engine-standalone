@@ -9,7 +9,10 @@ export const useStore = () => useContext(Ctx)
 
 const loadFavs = () => { try { return new Set(JSON.parse(localStorage.getItem('simcore_favs') || '[]')) } catch { return new Set() } }
 
-export function StoreProvider({ children }) {
+// `twinDomain` / `twinName` are set ONLY when the hub mounts us (ScenarioRemoteApp): in the
+// hub the domain comes from the twin you have open, not from our own picker. Standalone
+// they are undefined and nothing below changes.
+export function StoreProvider({ children, twinDomain, twinName }) {
   const navigate = useNavigate()
   const [engineUp, setEngineUp] = useState(null)
 
@@ -46,6 +49,16 @@ export function StoreProvider({ children }) {
       return (l || []).filter(s => s.node_kind === 'fault').map(s => ({ ...s, domainKey: d.key, domainName: d.name }))
     })).then(lists => setAllScenarios(lists.flat())).catch(() => {})
   }, [domains])
+
+  // Hub-mounted: the ACTIVE TWIN picks the domain. Only if the engine actually has a domain
+  // by that name — an unknown twin domain leaves our own selection alone rather than
+  // emptying the scenario list and looking like the engine is down.
+  useEffect(() => {
+    if (!twinDomain || !domains.length) return
+    const hit = domains.find(d => d.key === twinDomain) ||
+      domains.find(d => twinDomain.startsWith(d.key) || d.key.startsWith(twinDomain))
+    if (hit) setDomain(hit.key)
+  }, [twinDomain, domains])
 
   const loadScenarios = useCallback(async (d) => {
     const list = await api.scenarios(d)
@@ -99,6 +112,7 @@ export function StoreProvider({ children }) {
 
   const value = useMemo(() => ({
     engineUp,
+    twinName,        // hub's active twin, for "which twin am I simulating" banners
     domains, domain, setDomain,
     scenarios, scenarioId, setScenarioId, reloadScenarios: () => loadScenarios(domain),
     allScenarios, favorites, toggleFav, openScenario,
@@ -107,7 +121,7 @@ export function StoreProvider({ children }) {
     graph, running, error, run,
     mc, mcRunning, runMonteCarlo,
     selected: scenarios.find(s => s.id === scenarioId) || null,
-  }), [engineUp, domains, domain, scenarios, scenarioId, allScenarios, favorites, simSel, builderPick, toggleFav,
+  }), [engineUp, twinName, domains, domain, scenarios, scenarioId, allScenarios, favorites, simSel, builderPick, toggleFav,
     openScenario, openInBuilder, readiness, graph, running, error, run, mc, mcRunning, runMonteCarlo, loadScenarios])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

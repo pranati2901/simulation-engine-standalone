@@ -7,6 +7,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+    <!--
+      The document reset lives HERE, not in styles.css, and that is deliberate.
+      styles.css is linked into the HUB's <head> when this app runs as a federated remote,
+      so vite.config.js rewrites its `body`/`*` rules to sit under .sc-root — which means
+      the real <body> would keep its 8px default margin. index.html is standalone-only (it
+      never ships to the hub), so this is the one safe place to reset the document itself.
+      The hub ships its own equivalent reset.
+    -->
+    <style>
+      html, body, #root { height: 100%; }
+      body { margin: 0; background: #f7f7fb; -webkit-font-smoothing: antialiased; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

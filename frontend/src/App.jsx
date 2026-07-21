@@ -1,22 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useStore } from './store.jsx'
 import Icon from './components/Icon.jsx'
-import Dashboard from './modes/Dashboard.jsx'
-import Library from './modes/Library.jsx'
-import DecisionMode from './modes/DecisionMode.jsx'
-import TrainingMode from './modes/TrainingMode.jsx'
-import TwinMode from './modes/TwinMode.jsx'
-import Reports from './modes/Reports.jsx'
-import WarRoom from './modes/WarRoom.jsx'
-import MissionControl from './modes/MissionControl.jsx'
-import DataLayer from './modes/DataLayer.jsx'
-import Portfolio from './modes/Portfolio.jsx'
-import EVRecords from './modes/EVRecords.jsx'
-import EVNetwork from './modes/EVNetwork.jsx'
-import Builder from './modes/Builder.jsx'
-import Simulation from './modes/Simulation.jsx'
-import Assumptions from './modes/Assumptions.jsx'
+import ScenarioRoutes from './ScenarioRoutes.jsx'
 
 const NAV = [
   { to: '/simulate', id: 'simulate', label: 'Simulate', icon: 'simulation', color: '#7c3aed', title: 'Mission Control', sub: 'Ask anything — simulate the future' },
@@ -122,27 +108,7 @@ export default function App() {
           {engineUp === false
             ? <div className="card"><div className="empty">Can’t reach the engine on <span className="mono">:8002</span>. Start it, then reload.</div></div>
             : !allowed ? <Navigate to={home} replace />
-            : (
-              <Routes>
-                <Route path="/" element={<Navigate to={home} replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/simulate" element={<MissionControl />} />
-                <Route path="/network" element={<Portfolio />} />
-                <Route path="/data" element={<DataLayer />} />
-                <Route path="/warroom" element={<WarRoom />} />
-                <Route path="/ev-network" element={<EVNetwork />} />
-                <Route path="/library" element={<Library />} />
-                <Route path="/builder" element={<Builder />} />
-                <Route path="/simulation" element={<Simulation />} />
-                <Route path="/decision" element={<DecisionMode />} />
-                <Route path="/training" element={<TrainingMode />} />
-                <Route path="/twin" element={<TwinMode />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/records" element={<EVRecords />} />
-                <Route path="/assumptions" element={<Assumptions />} />
-                <Route path="*" element={<Navigate to={home} replace />} />
-              </Routes>
-            )}
+            : <ScenarioRoutes home={home} />}
         </main>
       </div>
     </div>
