@@ -31,9 +31,19 @@ export default function EVRecords() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {rows.map(r => (
                 <div key={r.id} className="rec-row">
+                  {r.type === 'drill' && (
+                    <span className="rec-grade" data-g={r.grade} title={`Take Command grade ${r.grade}`}>{r.grade}</span>
+                  )}
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}><b>{r.asset} — {r.fault}</b><b>{inr(r.exposure)}</b></div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{r.site} · {r.preventable}% preventable · best fix: {r.best} · {new Date(r.ts).toLocaleString()}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <b>{r.asset} — {r.fault}</b>
+                      <b>{r.type === 'drill' ? `${r.score}/100` : inr(r.exposure)}</b>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                      {r.type === 'drill'
+                        ? <>▶ Take Command drill · saved {inr(r.saved)} · incurred {inr(r.exposure)} · {new Date(r.ts).toLocaleString()}</>
+                        : <>{r.site} · {r.preventable}% preventable · best fix: {r.best} · {new Date(r.ts).toLocaleString()}</>}
+                    </div>
                   </div>
                   <button className="favbtn" onClick={() => del(r.id)} title="Delete" style={{ color: 'var(--muted)' }}>✕</button>
                 </div>
