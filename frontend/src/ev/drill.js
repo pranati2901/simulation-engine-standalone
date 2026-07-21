@@ -176,31 +176,37 @@ export function repairStepsFor(assetName, faultName) {
       brief: 'De-energise the asset and prove zero energy before touching hardware.',
       detail: `Apply lockout/tagout on ${assetName} and verify zero energy at the point of work. Nothing physical happens until this is confirmed.`,
       mechanism: 'Breaker locked open and tagged, stored energy discharged, absence-of-voltage tested — the legal and physical precondition for any hands-on work.',
+      howto: [`Identify the upstream isolation point / breaker for ${assetName}`, 'Open the breaker, apply your personal lock and tag', 'Discharge any stored energy (caps / DC bus / the pack)', 'Test for absence of voltage — prove it is dead'],
       risk: 'Working a live asset is the #1 cause of arc-flash and electrocution — an automatic fail.' },
     { id: 'inspect', title: 'Inspect the failed component', icon: '🔎', kind: 'action', physical: true, requires: ['loto'], heal: 0.15,
       brief: `Open the enclosure and confirm the failure mode on ${assetName}.`,
       detail: `Confirm the root cause with eyes-on inspection before swapping anything — thermal damage, a tripped device, a failed connector, a seized pump.`,
       mechanism: 'Visual + thermal-camera inspection localises the failed element so you replace the actual fault, not a symptom.',
+      howto: ['Open the enclosure / access panel', 'Do a visual + thermal-camera scan of the suspect area', 'Localise the failed element (burnt, tripped, seized)', 'Record the failure mode before removing anything'],
       risk: 'Skip inspection and you may replace a healthy part while the real fault stays in service.' },
     { id: 'replace', title: 'Repair / replace the part', icon: '🔧', kind: 'action', physical: true, requires: ['inspect'], heal: 0.32,
       brief: 'Restore or swap the failed component to serviceable spec.',
       detail: 'Replace the failed element (contactor, connector, cooling pump, cell module) with a serviceable unit to the OEM specification.',
       mechanism: 'Correct part number, torqued to spec, terminations verified — this is what actually restores the asset’s designed capability.',
+      howto: ['Confirm the correct OEM part number', 'Remove the failed component', 'Fit the replacement and torque to spec', 'Verify all terminations are tight and correct'],
       risk: 'A wrong or mis-torqued part re-fails under load, usually worse than the original fault.' },
     { id: 'recal', title: 'Recalibrate to spec', icon: '🎚', kind: 'action', physical: true, requires: ['replace'], heal: 0.18,
       brief: 'Reload set-points and protection thresholds.',
       detail: 'Re-reference set-points, protection thresholds and calibration so the asset behaves exactly to design.',
       mechanism: 'Protection relays, BMS limits and controller set-points are re-loaded and verified against the spec sheet.',
+      howto: ['Open the controller / protection config', 'Load the set-points from the spec sheet', 'Set protection thresholds / BMS limits', 'Re-reference calibration and verify against spec'],
       risk: 'Wrong thresholds either nuisance-trip the asset or fail to protect it.' },
     { id: 'test', title: 'Functional test under load', icon: '⚡', kind: 'action', requires: ['recal'], heal: 0.22,
       brief: 'Re-energise and confirm the asset holds nominal under load.',
       detail: 'Remove LOTO, re-energise and run the asset up under load to confirm it holds nominal readings — not just at idle.',
       mechanism: 'Staged re-energisation with live telemetry watched against the healthy envelope proves the repair holds.',
+      howto: ['Remove your lock/tag (LOTO)', 'Re-energise in stages, watching for faults', 'Run the asset up under load', 'Watch live telemetry hold nominal across the envelope'],
       risk: 'Signing off without a load test hides a repair that only works unloaded.' },
     { id: 'signoff', title: 'Verify health & close work order', icon: '✅', kind: 'verify', verify: true, requires: ['test'], heal: 0.07,
       brief: 'Confirm full health and close the job.',
       detail: `Confirm ${assetName} reads healthy across the board and close the work order with the repair logged for audit.`,
       mechanism: 'Health restored + telemetry in-band + work order logged = an auditable, defensible closure.',
+      howto: [`Confirm ${assetName} reads healthy across all signals`, 'Confirm telemetry is back in-band and stable', 'Log the repair, parts used and readings', 'Close the work order'],
       risk: 'Close early and an unverified repair goes back into service.' },
   ]
 }
@@ -212,13 +218,67 @@ const STEP_FOCUS = {
   'DCFC:charger_offline': { diag: 'DCFC-01', reboot: 'DCFC-01', reroute: 'DCFC-01', truck: 'DCFC-01', verify: 'DCFC-01' },
 }
 
+// The concrete "HOW" for each bespoke step — the actual operator procedure a trainee performs.
+// This is what turns the drill from "click Execute" into "learn how to shed load, step by step".
+const HOWTO = {
+  'TX-1:overload': {
+    diag: ['Open the EMS dashboard → Transformer T1 panel', 'Compare live load % against the 90% protection threshold', 'Confirm top-oil temperature is rising (a real overload, not a downstream trip)', 'Note the headroom left before the relay arms'],
+    shed: ['Open EMS → Load Management → DC chargers', 'Sort active sessions by priority (lowest first)', 'Select the low-priority DC sessions to curtail', 'Send OCPP SetChargingProfile = 0 kW to those EVSEs', 'Watch Transformer T1 load drop back under 90%'],
+    bess: ['Check BESS-A SoC > 25% and no thermal flag', 'Open EMS → Storage → BESS-A → set mode = Discharge', 'Set target = peak-shave and ramp to the chosen level', 'Confirm grid import (and T1 load) falls by the dispatched kW'],
+    verify: ['Read Transformer T1 load — confirm it holds < 90%', 'Confirm headroom recovered and temperature falling', 'Hand control back to normal EMS scheduling', 'Log the incident and close'],
+  },
+  'BESS-A:thermal_runaway': {
+    diag: ['Open the BMS → BESS-A cell view', 'Check the max cell-temperature trend (rising fast?)', 'Read the runaway-risk index vs its baseline', 'Rule out a nuisance / ambient-heat alarm'],
+    isolate: ['Confirm all personnel are clear of the enclosure', 'Open the BESS-A DC contactors to electrically isolate the pack', 'Trigger the liquid-cooling loop', 'Arm the aerosol suppression system', 'Watch runaway-risk and cell temperature fall'],
+    cover: ['Open EMS → Grid import and read the demand-charge ceiling', 'Raise grid import to serve the load BESS-A was covering', 'Cap import at the demand limit to protect the ratchet', 'Confirm the affected chargers stay up'],
+    verify: ['Confirm runaway risk is back near baseline', 'Confirm cell temperature is falling', 'Confirm the load is served / chargers restored', 'Flag BESS-A for post-incident inspection'],
+  },
+  'DCFC:charger_offline': {
+    diag: ['Open the CPMS → charger status board', 'Confirm the bank shows "offline" (comms), not a power fault', 'Check the feeder behind them is healthy', 'Conclude it is a controller / OCPP fault'],
+    reboot: ['Select the offline charge points in the CPMS', 'Send OCPP Reset[soft] to them', 'Wait for the WebSocket to re-establish', 'Confirm the EVSEs re-register as Available'],
+    reroute: ['Open the driver app / signage controller', 'Mark the offline bays unavailable', 'Repoint arriving drivers to the healthy bays'],
+    truck: ['Confirm the reboot did NOT clear the fault', 'Raise a field work order', 'Dispatch a technician with a spare controller board', 'Track the ETA and keep drivers informed'],
+    verify: ['Confirm faulted-charger count is back to 0', 'Confirm sessions are flowing on the recovered bays', 'Close the ticket'],
+  },
+}
+const GENERIC_HOWTO = {
+  diagnose: ['Open the digital twin → the affected asset and read its live tags', 'Find the signal sitting outside its healthy band (load, temp, risk, faulted count)', 'Cross-check the trend — rising, or a one-off spike?', 'Confirm it matches the reported fault before you commit a response'],
+  verify: ['Re-read the signals you diagnosed — confirm they are back in-band', 'Confirm the response is holding, not just momentarily better', 'Return the asset to normal control', 'Log the cause, actions and outcome, then close'],
+}
+
+// The concrete operator procedure for EACH response lever, keyed by strategy id. This deepens
+// the how-to for EVERY fault (not just the bespoke three) — feeder trips, connector faults,
+// grid brownout/supply-loss, BESS offline, transformer overheat all get real, specific steps.
+const STRAT_HOWTO = {
+  shed: ['EMS → Load Management → DC chargers, sort by session priority', 'Tag the lowest-priority DC sessions (idle / fleet first)', 'Send OCPP SetChargingProfile: chargingRateUnit=W, limit=0', 'Confirm those EVSEs report SuspendedEVSE', 'Watch the transformer load fall back in-band (~2–5 s)'],
+  bess: ['Confirm BESS-A SoC > 25% and no thermal flag on the BMS', 'EMS → Storage → BESS-A → Mode = Discharge (peak-shave)', 'Setpoint kW = (grid import − the limit); ramp up', 'Confirm grid import drops ~1:1 with BESS output', 'Hold until the asset is back in band'],
+  curtail: ['EMS → Load Management → global DC power cap', 'Set the site DC cap to ~50% of nameplate', 'Push SetChargingProfile at the cap to all DC EVSEs', 'Confirm total DC-fast kW halves and the fault eases'],
+  cool: ['SCADA → Transformer T1 → Cooling = Forced (fans + oil pumps ON)', 'EMS → throttle DC-fast power 20–30%', 'Watch the top-oil temperature (tag TX1.OILTEMP) stop climbing', 'Hold until temp trends below the derate threshold'],
+  shift: ['EMS → Feeder balance view; read both feeders’ headroom', 'Confirm the target feeder headroom > the load you’ll move', 'Reassign the DC bank / AC bays to the healthy feeder', 'Confirm both feeders sit under their limit — no overcurrent'],
+  reclose: ['Confirm the overcurrent cause is cleared / load already shed', 'SCADA → Feeder → reset the relay lockout', 'Issue the Close command', 'Watch current settle — no immediate re-trip'],
+  rebal: ['EMS → move the DC bank source onto Feeder F-2', 'Confirm F-2 headroom covers the bank load', 'Restore charging on the rebalanced bank', 'Confirm neither feeder exceeds its limit'],
+  stagger: ['EMS → AC bays → enable session sequencing', 'Set max concurrent AC sessions under the feeder limit', 'Queue the remaining sessions', 'Confirm feeder current stays below the trip point'],
+  reboot: ['CPMS → select the offline charge points', 'Send OCPP Reset: type=Soft', 'Wait ~30 s for the WebSocket + BootNotification', 'Confirm each EVSE re-registers as Available', 'Fire a test StartTransaction to confirm it dispenses'],
+  reroute: ['Open the driver app / on-site signage controller', 'Set the offline bays to Unavailable', 'Repoint navigation + queue to the healthy bays', 'Confirm arrivals stop stacking at the dead bays'],
+  truck: ['Confirm the reboot did NOT restore the unit (hardware fault)', 'Raise a field work order and attach the diagnostic log', 'Dispatch a tech with a spare controller / comms board', 'Track the ETA and keep drivers informed via the app'],
+  lock: ['CPMS → the faulted connector → set Unavailable / Locked', 'Confirm no session can start on it', 'Route the waiting driver to the adjacent bay', 'Raise a repair ticket for the connector'],
+  reset: ['CPMS → connector → run remote diagnostics', 'Clear the logged fault code', 'Send a soft reset to the EVSE', 'Confirm the connector returns to Available'],
+  isolate: ['Confirm all personnel are clear of the BESS enclosure', 'Command Open on the BESS-A DC contactors (electrical isolation)', 'Start the liquid-cooling loop at max flow', 'Arm the aerosol / clean-agent suppression', 'Watch runaway-risk and max cell temp fall'],
+  gridcov: ['EMS → Grid import; read the monthly demand-charge ceiling', 'Raise import to cover the kW the pack was shaving', 'Cap import at the demand limit to avoid the ratchet', 'Confirm the affected chargers stay online'],
+  hold: ['EMS → set the grid as the primary source', 'Check the demand-charge headroom', 'Carry the peak within the cap', 'Shed low-priority DC if you approach the ratchet'],
+  backup: ['Start the backup storage / genset', 'Sync it to the bus', 'Transfer load onto the backup', 'Confirm site support is restored'],
+  ride: ['EMS → put the site in islanding-ready mode', 'Dispatch BESS-A + solar to hold voltage', 'Curtail DC-fast to protect the site', 'Ride the sag until the grid recovers'],
+  island: ['Open the main grid breaker (disconnect from the grid)', 'EMS → Island mode on BESS-A + solar', 'Prioritise AC bays; shed DC-fast', 'Hold frequency and voltage stable'],
+  priority: ['EMS → set load priority = AC bays first', 'Shed the DC-fast sessions', 'Stage a sequenced restart on supply return', 'Confirm the critical loads stay served'],
+}
+
 // Build a solid interactive procedure for ANY fault: bespoke where authored, else generated from
 // the fault's own mitigation strategies so every fault still gets a rich, ordered, scored drill.
 export function getProcedure(assetId, faultId) {
   const key = `${assetId}:${faultId}`
   if (P[key]) {
-    const foc = STEP_FOCUS[key] || {}
-    return { key, objective: P[key].objective, steps: P[key].steps.map((st) => ({ ...st, focus: st.focus || foc[st.id] })) }
+    const foc = STEP_FOCUS[key] || {}; const how = HOWTO[key] || {}
+    return { key, objective: P[key].objective, steps: P[key].steps.map((st) => ({ ...st, focus: st.focus || foc[st.id], howto: st.howto || how[st.id] || STRAT_HOWTO[st.id] })) }
   }
 
   const strats = strategiesFor(assetId, faultId).filter((s) => s.key !== 'nothing')
@@ -233,6 +293,7 @@ export function getProcedure(assetId, faultId) {
         { signal: 'ev:solarOutput', label: 'Solar output kW' },
         { signal: 'ev:bessSoc', label: 'BESS state of charge' },
       ] },
+      howto: GENERIC_HOWTO.diagnose,
       risk: 'Responding without a diagnosis risks fixing the wrong thing.' },
     ...strats.map((s, i) => ({
       id: s.key, title: s.name, icon: i === 0 ? '⭐' : '⚙️', kind: 'action', requires: ['diag'],
@@ -241,6 +302,7 @@ export function getProcedure(assetId, faultId) {
       mechanism: `Applies the "${s.name}" response; readiness ${s.readiness}% — the engine models this containing ~${s.readiness}% of the cascade.`,
       targets: ['ev:gridLoad', 'ev:faultedChargers', 'ev:bessPower'],
       generic: true,
+      howto: STRAT_HOWTO[s.key] || [`Open the EMS / CPMS console for ${assetId}`, `Select the "${s.name}" response`, 'Apply it at the recommended level', 'Confirm the fault metric moves back into its healthy band'],
       risk: `Without "${s.name}", the fault keeps cascading across the site.`,
     })),
     { id: 'verify', title: 'Confirm stable & sign off', icon: '✅', kind: 'verify', requires: [strats[0]?.key || 'diag'], w: 0.05, seconds: 3, verifyWhen: 'stable',
@@ -248,6 +310,7 @@ export function getProcedure(assetId, faultId) {
       detail: 'Close the incident only once the twin shows the site stabilised.',
       mechanism: 'The objective is met when the abnormal signals return to their healthy envelope.',
       targets: ['ev:gridLoad', 'ev:faultedChargers'],
+      howto: GENERIC_HOWTO.verify,
       risk: 'A premature all-clear lets the fault re-develop.' },
   ]
   return { key, objective: `Contain the ${faultId.replace(/_/g, ' ')} on ${assetId} and stabilise the site.`, steps }

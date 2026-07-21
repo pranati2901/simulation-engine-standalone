@@ -43,6 +43,7 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
   const [confirmed, setConfirmed] = useState(false)
   const [level, setLevel] = useState(null)
   const [ring, setRing] = useState(null)   // in-world action popover {x,y}
+  const [checked, setChecked] = useState([])   // how-to sub-steps ticked off for the current step
 
   const start = () => {
     const fr = { ...HEALTHY, ...(startFrame || {}) }; clampFrame(fr)
@@ -58,6 +59,10 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
 
   const respondStep = () => (sim.current ? proc.steps.find((st) => !sim.current.results.find((r) => r.id === st.id)) : null)
   const repairStep = () => (sim.current ? repair.find((st) => !sim.current.repairResults.find((r) => r.id === st.id)) : null)
+
+  // reset the how-to checklist (and level/confirm) whenever the active step changes
+  const activeStepId = sim.current ? (stage === 'repair' ? repairStep() : respondStep())?.id : null
+  useEffect(() => { setChecked([]); setLevel(null); setConfirmed(false) }, [stage, activeStepId])
 
   useEffect(() => {
     if (stage !== 'respond' && stage !== 'repair') return
@@ -288,6 +293,7 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
   const isRepair = stage === 'repair'
   const step = isRepair ? repairStep() : respondStep()
   const opt = step?.choose ? step.choose.options[level ?? 1] : null
+  const allChecked = !step?.howto?.length || checked.length >= step.howto.length
   const target = step ? (isRepair ? faultAsset : (step.focus || SIG_ASSET[step.targets?.[0]] || faultAsset)) : faultAsset
   const targetName = ASSET_NAME[target] || target
   const prereqOk = !step?.requires || (isRepair ? step.requires.every((r) => s.repairResults.find((x) => x.id === r)) : step.requires.every((r) => s.results.find((x) => x.id === r && x.status === 'done')))
@@ -307,15 +313,26 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
   }
   const openRing = () => { const r = stageRef.current?.getBoundingClientRect(); setRing({ x: (r?.width || 640) * 0.5, y: (r?.height || 520) * 0.46 }) }
 
+  const howtoJsx = step?.howto?.length > 0 ? (
+    <div className="tc-howto">
+      <div className="tc-howto-t"><span>🛠 How to do it</span>{allChecked ? <span className="tc-howto-ok">✓ walked</span> : <span className="tc-howto-c">{checked.length}/{step.howto.length}</span>}</div>
+      {step.howto.map((h, i) => (
+        <button key={i} className={`tc-howto-i ${checked.includes(i) ? 'on' : ''}`} onClick={() => setChecked((c) => c.includes(i) ? c.filter((x) => x !== i) : [...c, i])}>
+          <span className="tc-howto-n">{checked.includes(i) ? '✓' : i + 1}</span><span className="tc-howto-x">{h}</span></button>))}
+    </div>
+  ) : null
+
   const actionControls = () => {
     if (!step) return null
     if (!isRepair && step.kind === 'diagnose') return (<>
+      {howtoJsx}
       <div className="tc-ring-q">{step.diagnose.prompt}</div>
       {step.diagnose.options.map((o) => (
         <button key={o.signal} className="tc-diag-opt" onClick={() => { diagnose(step, o); setRing(null) }}>
           <span>{o.label}</span><b>{sigVal(s.frame, o.signal)}{(SIG[o.signal] || ['', ''])[1]}</b></button>))}
     </>)
     if (!isRepair && step.kind === 'action') return (<>
+      {howtoJsx}
       {step.choose && (<>
         <div className="tc-ring-q">{step.choose.prompt}</div>
         {step.choose.options.map((o, i) => (
@@ -323,12 +340,14 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
             <span className="tc-co-l">{o.label}</span><span className="tc-co-n">{o.note}</span></button>))}
       </>)}
       {step.safety && <label className="tc-confirm"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> {step.confirm}</label>}
+      {!allChecked && <div className="tc-gate">🛠 Tick off the how-to steps to unlock</div>}
       <div className="tc-step-btns">
-        <button className="tc-btn tc-primary" disabled={step.safety && !confirmed} onClick={() => { execute(step); setRing(null) }}>▶ Do it{opt ? ` · ${opt.label.split(' —')[0]}` : ''}</button>
+        <button className="tc-btn tc-primary" disabled={(step.safety && !confirmed) || !allChecked} onClick={() => { execute(step); setRing(null) }}>▶ Do it{opt ? ` · ${opt.label.split(' —')[0]}` : ''}</button>
         <button className="tc-btn" onClick={() => { skip(step); setRing(null) }}>Skip</button>
       </div>
     </>)
     if (!isRepair && step.kind === 'verify') return (<>
+      {howtoJsx}
       <div className={`tc-verify-state ${sev <= 0.35 ? 'ok' : 'no'}`}>{sev <= 0.35 ? '✓ Stable — safe to sign off' : '⚠ Not stable yet — verifying will fail'}</div>
       <div className="tc-step-btns">
         <button className="tc-btn tc-primary" onClick={() => { verify(step); setRing(null) }}>✅ Verify</button>
@@ -336,10 +355,12 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
       </div>
     </>)
     return (<>
+      {howtoJsx}
       {step.safety && <label className="tc-confirm"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} /> Confirmed: locked, tagged &amp; zero-energy verified</label>}
       {step.physical && !s.loto && <div className="tc-verify-state no">⚠ Asset still LIVE — apply LOTO first or this logs as unsafe</div>}
+      {!allChecked && <div className="tc-gate">🛠 Tick off the how-to steps to unlock</div>}
       <div className="tc-step-btns">
-        <button className="tc-btn tc-primary" disabled={step.safety && !confirmed} onClick={() => { performRepair(step); setRing(null) }}>{step.kind === 'verify' ? '✅ Verify & close' : '🔧 Perform'}</button>
+        <button className="tc-btn tc-primary" disabled={(step.safety && !confirmed) || !allChecked} onClick={() => { performRepair(step); setRing(null) }}>{step.kind === 'verify' ? '✅ Verify & close' : '🔧 Perform'}</button>
         <button className="tc-btn" onClick={() => { skipRepair(step); setRing(null) }}>Skip</button>
       </div>
     </>)
@@ -405,7 +426,7 @@ export default function TakeCommand({ assetId, faultId, facts, conditions = [], 
                   <div key={k} className="tc-read"><span>{lab}</span><b>{sigVal(s.frame, k)}{u}</b></div>) })}</div>
               )}
               <div className="tc-actprompt">
-                <div className="tc-actprompt-t">👆 {prereqOk ? <>Click <b>{targetName}</b> in the twin to act</> : <>First do the highlighted prerequisite</>}</div>
+                <div className="tc-actprompt-t">{!prereqOk ? <>⚠ First do the highlighted prerequisite</> : <>👆 Click <b>{targetName}</b> in the twin{step.howto?.length ? <> — you'll walk its <b>{step.howto.length}-step</b> procedure, then it fires</> : ' to act'}</>}</div>
                 <button className="tc-actbtn" disabled={!!s.anim} onClick={openRing}>Act on {targetName} →</button>
               </div>
             </div>
