@@ -1,0 +1,85 @@
+# GoalCert live-fire range — a free, local cyber range.
+#
+#   attacker      Kali Linux with nmap / nikto / impacket / netexec + a browser shell (ttyd)
+#   target-web    DVWA — intentionally vulnerable web app (HTTP)
+#   target-files  Samba file server with a weak account (SMB)
+#
+# This file is **project-parameterizable**: it has no fixed container names, IPs, subnet or host
+# ports, so the engine can run ONE shared range OR many isolated ones — one per live session —
+# with `docker compose -p <project>`. Each project gets its own network (true isolation between
+# concurrent sessions/teams) and its own random host ports (queried via `docker compose port`).
+#
+#   Shared range:   docker compose -f infrastructure/docker-compose.lab.yml -p gclab up -d
+#   Per session:    docker compose -f … -p gc-<sessionid> up -d      (the SessionLabPool does this)
+#
+# The lab is reached via `docker compose exec` (engine) and the ttyd browser shell; targets are
+# NOT exposed to your LAN beyond the random localhost ports Docker maps.
+
+services:
+  attacker:
+    build:
+      context: .
+      dockerfile: Dockerfile.attacker
+    image: goalcert/attacker:latest
+    # nmap needs raw sockets for SYN/service scans; these caps make it behave like a real Kali box.
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    ports:
+      - "7681"          # ttyd browser shell -> random host port (query with `compose port attacker 7681`)
+    networks:
+      - range
+    restart: unless-stopped
+
+  target-web:
+    image: vulnerables/web-dvwa:latest
+    ports:
+      - "80"            # DVWA -> random host port (query with `compose port target-web 80`)
+    networks:
+      - range
+    restart: unless-stopped
+
+  target-files:
+    image: dperson/samba:latest
+    # weak account smbuser/Password123 + a guest-readable share named "public"
+    command: >
+      -u "smbuser;Password123"
+      -s "public;/share;yes;no;yes;smbuser"
+      -p
+    networks:
+      - range
+    restart: unless-stopped
+
+  # --- Per-scenario CUSTOM vulnerable web apps (the "goal" of each Library hack-lab mission) ---
+  # Each is a small, themed, intentionally vulnerable Flask app reachable from the Kali box by name
+  # (target-w1 / target-r5 / target-c5) and browsable via its random host port ("View app").
+  target-w1:
+    build: { context: ./targets/w1 }
+    image: goalcert/target-w1:latest
+    ports:
+      - "80"            # Mercy Health Patient Portal (SQL injection) -> random host port
+    networks:
+      - range
+    restart: unless-stopped
+
+  target-r5:
+    build: { context: ./targets/r5 }
+    image: goalcert/target-r5:latest
+    ports:
+      - "80"            # MediumCorp SecureMail (brute + command injection) -> random host port
+    networks:
+      - range
+    restart: unless-stopped
+
+  target-c5:
+    build: { context: ./targets/c5 }
+    image: goalcert/target-c5:latest
+    ports:
+      - "80"            # GlobalTech Admin Console (password spray + RCE) -> random host port
+    networks:
+      - range
+    restart: unless-stopped
+
+networks:
+  range:
+    driver: bridge

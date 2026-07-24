@@ -1,0 +1,79 @@
+# GoalCert Attack Infrastructure — Kali + Caldera + Metasploit
+# Usage: docker compose -f docker-compose.attack.yml up -d
+#
+# Caldera UI:  http://localhost:8888 (admin / admin)
+# Caldera API: http://localhost:8888/api/v2 (KEY: ADMIN123)
+# MSF RPC:     localhost:55553 (msf / goalcert)
+
+version: '3.8'
+
+services:
+  # Kali Linux attack box (Impacket, CrackMapExec, Nmap)
+  kali:
+    image: kalilinux/kali-rolling:latest
+    container_name: goalcert-kali
+    hostname: kali-attacker
+    command: tail -f /dev/null
+    volumes:
+      - kali-loot:/opt/loot
+    networks:
+      attack:
+        ipv4_address: 10.10.0.10
+    mem_limit: 2g
+
+  # MITRE Caldera (adversary emulation + orchestration)
+  caldera:
+    build:
+      context: .
+      dockerfile: Dockerfile.caldera
+    container_name: goalcert-caldera
+    hostname: caldera-server
+    ports:
+      - "8888:8888"
+      - "7010:7010"
+      - "7012:7012"
+    networks:
+      attack:
+        ipv4_address: 10.10.0.12
+    mem_limit: 2g
+
+  # Metasploit Framework (exploits + C2)
+  metasploit:
+    image: metasploitframework/metasploit-framework:latest
+    container_name: goalcert-msf
+    hostname: msf-server
+    entrypoint: >
+      bash -c "./msfdb init && ./msfrpcd -U msf -P goalcert -f -a 0.0.0.0 -p 55553 -S"
+    ports:
+      - "55553:55553"
+      - "4444:4444"
+    depends_on:
+      - msf-db
+    environment:
+      DATABASE_URL: "postgres://postgres@msf-db:5432/msf?pool=200&timeout=5"
+    networks:
+      attack:
+        ipv4_address: 10.10.0.11
+    mem_limit: 4g
+
+  msf-db:
+    image: postgres:15-alpine
+    container_name: goalcert-msf-db
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: msf
+    volumes:
+      - msf-pgdata:/var/lib/postgresql/data
+    networks:
+      attack:
+
+volumes:
+  kali-loot:
+  msf-pgdata:
+
+networks:
+  attack:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24

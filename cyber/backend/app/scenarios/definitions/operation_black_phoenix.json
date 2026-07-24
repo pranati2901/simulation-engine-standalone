@@ -1,0 +1,501 @@
+{
+  "schema_version": 1,
+  "id": "operation_black_phoenix",
+  "name": "Operation Black Phoenix",
+  "type": "purple",
+  "industry": "manufacturing",
+  "badge": "badge-purple",
+  "label": "Full-Scope (Red/Blue/SOC)",
+  "description": "Sophisticated, multi-stage intrusion against a critical-infrastructure manufacturer: phishing to domain-admin, exfiltration of engineering IP, enterprise ransomware, and an IT/OT pivot to manipulate plant PLCs.",
+  "difficulties": [
+    "Easy",
+    "Medium",
+    "Hard",
+    "Expert"
+  ],
+  "nominal_duration_min": 120,
+  "mitre_tactics": [
+    "Reconnaissance",
+    "Initial Access",
+    "Credential Access",
+    "Privilege Escalation",
+    "Lateral Movement",
+    "Persistence",
+    "Collection",
+    "Exfiltration",
+    "Defense Evasion",
+    "Impact"
+  ],
+  "phases": [
+    "Reconnaissance",
+    "Initial Compromise",
+    "Privilege Escalation",
+    "Lateral Movement",
+    "Persistence",
+    "Data Exfiltration",
+    "Ransomware",
+    "OT Attack"
+  ],
+  "recommended_topology": {
+    "assets": [
+      {
+        "id": "ws-ceo",
+        "type": "endpoint",
+        "name": "WS-CEO",
+        "role": "primary_endpoint",
+        "zone": "corp",
+        "criticality": 2,
+        "data_sensitivity": null,
+        "props": {
+          "user_susceptibility": 4
+        }
+      },
+      {
+        "id": "ws-fin",
+        "type": "endpoint",
+        "name": "WS-FINANCE",
+        "role": null,
+        "zone": "corp",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "dc-01",
+        "type": "domain_controller",
+        "name": "DC-01",
+        "role": null,
+        "zone": "corp",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "mail-01",
+        "type": "email_server",
+        "name": "MAIL-01",
+        "role": null,
+        "zone": "corp",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "file-eng",
+        "type": "file_share",
+        "name": "FILE-ENG",
+        "role": "sensitive_share",
+        "zone": "corp",
+        "criticality": 5,
+        "data_sensitivity": 5,
+        "props": null
+      },
+      {
+        "id": "erp-01",
+        "type": "erp",
+        "name": "ERP-01",
+        "role": null,
+        "zone": "corp",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "mes-01",
+        "type": "mes",
+        "name": "MES-01",
+        "role": "it_ot_bridge",
+        "zone": "ot_dmz",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "twin-01",
+        "type": "digital_twin",
+        "name": "DIGITAL-TWIN",
+        "role": null,
+        "zone": "ot_dmz",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "plc-01",
+        "type": "ot_plc",
+        "name": "PLC-DOSING",
+        "role": "plc",
+        "zone": "ot",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "cloud-01",
+        "type": "cloud",
+        "name": "CLOUD-TENANT",
+        "role": null,
+        "zone": "cloud",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "siem-01",
+        "type": "siem_platform",
+        "name": "SIEM",
+        "role": null,
+        "zone": "soc",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "edr-01",
+        "type": "edr_platform",
+        "name": "EDR-CONSOLE",
+        "role": null,
+        "zone": "soc",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "fw-01",
+        "type": "firewall",
+        "name": "PERIMETER-FW",
+        "role": null,
+        "zone": "perimeter",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      },
+      {
+        "id": "vm-01",
+        "type": "vuln_mgmt",
+        "name": "VULN-MGMT",
+        "role": null,
+        "zone": "soc",
+        "criticality": null,
+        "data_sensitivity": null,
+        "props": null
+      }
+    ],
+    "controls": [
+      {
+        "id": "c-edr",
+        "type": "edr",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-siem",
+        "type": "siem",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-fw",
+        "type": "firewall_ids",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-seg",
+        "type": "segmentation",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-dlp",
+        "type": "dlp",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-mfa",
+        "type": "mfa",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-backup",
+        "type": "backups",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      },
+      {
+        "id": "c-email",
+        "type": "email_sec",
+        "name": null,
+        "enabled": true,
+        "scope": null,
+        "targets": null,
+        "props": null
+      }
+    ]
+  },
+  "playbook": [
+    {
+      "id": "s01",
+      "technique": "recon_osint",
+      "phase": "Reconnaissance",
+      "at_min": 1.0,
+      "target": null,
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s02",
+      "technique": "phishing",
+      "phase": "Initial Compromise",
+      "at_min": 4.0,
+      "target": {
+        "by": "role",
+        "value": "primary_endpoint",
+        "pick": "first"
+      },
+      "is_inject": true,
+      "label": "Phishing email from trusted-supplier look-alike delivered"
+    },
+    {
+      "id": "s03",
+      "technique": "c2_beacon",
+      "phase": "Initial Compromise",
+      "at_min": 6.0,
+      "target": {
+        "by": "role",
+        "value": "primary_endpoint",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s04",
+      "technique": "credential_dump",
+      "phase": "Privilege Escalation",
+      "at_min": 9.0,
+      "target": {
+        "by": "role",
+        "value": "primary_endpoint",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s05",
+      "technique": "kerberoasting",
+      "phase": "Privilege Escalation",
+      "at_min": 11.0,
+      "target": {
+        "by": "type",
+        "value": "domain_controller",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s06",
+      "technique": "dcsync_domain_admin",
+      "phase": "Privilege Escalation",
+      "at_min": 14.0,
+      "target": {
+        "by": "type",
+        "value": "domain_controller",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s07",
+      "technique": "lateral_movement",
+      "phase": "Lateral Movement",
+      "at_min": 17.0,
+      "target": {
+        "by": "role",
+        "value": "sensitive_share",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": "Lateral movement to file server"
+    },
+    {
+      "id": "s08",
+      "technique": "lateral_movement",
+      "phase": "Lateral Movement",
+      "at_min": 19.0,
+      "target": {
+        "by": "type",
+        "value": "erp",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": "Lateral movement to ERP"
+    },
+    {
+      "id": "s09",
+      "technique": "persistence_task",
+      "phase": "Persistence",
+      "at_min": 22.0,
+      "target": {
+        "by": "role",
+        "value": "primary_endpoint",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s10",
+      "technique": "cloud_persistence",
+      "phase": "Persistence",
+      "at_min": 25.0,
+      "target": {
+        "by": "type",
+        "value": "cloud",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s11",
+      "technique": "collection_staging",
+      "phase": "Data Exfiltration",
+      "at_min": 30.0,
+      "target": {
+        "by": "role",
+        "value": "sensitive_share",
+        "pick": "first"
+      },
+      "is_inject": true,
+      "label": "Sensitive engineering drawings staged for exfiltration"
+    },
+    {
+      "id": "s12",
+      "technique": "exfiltration",
+      "phase": "Data Exfiltration",
+      "at_min": 34.0,
+      "target": {
+        "by": "role",
+        "value": "sensitive_share",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s13",
+      "technique": "disable_security_tools",
+      "phase": "Ransomware",
+      "at_min": 40.0,
+      "target": {
+        "by": "role",
+        "value": "primary_endpoint",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s14",
+      "technique": "ransomware",
+      "phase": "Ransomware",
+      "at_min": 45.0,
+      "target": {
+        "by": "type",
+        "value": "erp",
+        "pick": "first"
+      },
+      "is_inject": true,
+      "label": "Ransomware deployment begins across the enterprise"
+    },
+    {
+      "id": "s15",
+      "technique": "ot_pivot",
+      "phase": "OT Attack",
+      "at_min": 52.0,
+      "target": {
+        "by": "role",
+        "value": "it_ot_bridge",
+        "pick": "first"
+      },
+      "is_inject": false,
+      "label": null
+    },
+    {
+      "id": "s16",
+      "technique": "ot_plc_modify",
+      "phase": "OT Attack",
+      "at_min": 58.0,
+      "target": {
+        "by": "role",
+        "value": "plc",
+        "pick": "first"
+      },
+      "is_inject": true,
+      "label": "Unauthorized PLC setpoint change \u2014 chemical dosing values drifting"
+    }
+  ],
+  "workflow_bindings": {
+    "red": "apt_ransomware_killchain",
+    "soc": "tiered_triage_escalation",
+    "blue": "nist_ir_response",
+    "mgmt": "exec_escalation_regulatory",
+    "ot": "ot_safety_ops"
+  },
+  "objectives": {
+    "red": [
+      "Gain initial access via phishing",
+      "Escalate privileges to Domain Admin",
+      "Establish persistence (endpoint and cloud)",
+      "Exfiltrate sensitive engineering data",
+      "Deploy ransomware enterprise-wide",
+      "Impact the OT/physical process"
+    ],
+    "blue": [
+      "Detect the initial compromise quickly",
+      "Contain and isolate affected hosts",
+      "Prevent privilege escalation to Domain Admin",
+      "Detect and block data exfiltration",
+      "Maintain business continuity / recover from ransomware",
+      "Protect safety-critical OT systems"
+    ]
+  },
+  "report_sections": [
+    "exec_summary",
+    "timeline",
+    "mitre_map",
+    "scorecard",
+    "regulatory_impact",
+    "financial_impact",
+    "recommendations",
+    "maturity_score",
+    "corrective_actions"
+  ]
+}

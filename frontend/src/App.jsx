@@ -17,6 +17,7 @@ import EVNetwork from './modes/EVNetwork.jsx'
 import Builder from './modes/Builder.jsx'
 import Simulation from './modes/Simulation.jsx'
 import Assumptions from './modes/Assumptions.jsx'
+import CyberApp from './cyber/CyberApp.tsx'
 
 const NAV = [
   { to: '/simulate', id: 'simulate', label: 'Simulate', icon: 'simulation', color: '#7c3aed', title: 'Mission Control', sub: 'Ask anything — simulate the future' },
@@ -36,14 +37,75 @@ const NAV = [
   { to: '/records', id: 'records', label: 'Records', icon: 'library', color: '#8b5cf6', title: 'Records', sub: 'Saved simulations — review & export' },
 ]
 
-// Domain landing — EV is fully built; the others reuse the generic tabs until configured.
+// Domain landing — EV and Cybersecurity are fully built; the others reuse the generic tabs.
 const DOMAINS = [
   { id: 'ev', name: 'EV Charging', engine: 'ev', desc: 'Charging networks, energy & fleet', note: 'gaadin.ai', icon: 'simulation', color: '#7c3aed', ready: true },
+  { id: 'cyber', name: 'Cybersecurity', engine: 'cyber', desc: 'Red / Blue / SOC cyber-range', note: 'GoalCert', icon: 'warroom', color: '#4902A2', ready: true },
   { id: 'healthcare', name: 'Healthcare', engine: 'hospital', desc: 'Hospitals, OR & capacity', icon: 'twin', color: '#0891b2' },
   { id: 'railway', name: 'Railway', engine: 'railway', desc: 'Rail operations & delays', icon: 'dashboard', color: '#059669' },
   { id: 'defence', name: 'Defence', engine: 'defence', desc: 'Readiness & response', icon: 'warroom', color: '#6d28d9' },
   { id: 'aerospace', name: 'Aerospace', engine: 'aerospace', desc: 'Fleet & AOG', icon: 'reports', color: '#2563eb' },
 ]
+
+// Cybersecurity (GoalCert) sidebar — native SimCore nav items that drive the embedded cyber app.
+// `to` values are GoalCert's own routes; the cyber tree is mounted at root only while this domain
+// is active, so the two engines never collide.
+const CYBER_NAV = [
+  { to: '/', id: 'gc-dashboard', label: 'Dashboard', icon: 'dashboard', color: '#4902A2', title: 'Cyber Command', sub: 'Your cyber-range at a glance' },
+  { to: '/live', id: 'gc-live', label: 'Live Scenarios', icon: 'simulation', color: '#e11d48', title: 'Live Scenarios', sub: 'Multiplayer Red/Blue/SOC missions' },
+  { to: '/library', id: 'gc-library', label: 'Scenario Library', icon: 'library', color: '#7c3aed', title: 'Scenario Library', sub: 'Browse and launch tested scenarios' },
+  { to: '/catalog', id: 'gc-catalog', label: 'Asset Catalog', icon: 'data', color: '#0891b2', title: 'Asset Catalog', sub: 'Assets, controls & techniques' },
+  { to: '/builder', id: 'gc-builder', label: 'Scenario Builder', icon: 'builder', color: '#a855f7', title: 'Scenario Builder', sub: 'Compose the environment & playbook' },
+  { to: '/studio', id: 'gc-studio', label: 'Studio', icon: 'compose', color: '#0e9aa7', title: 'Scenario Studio', sub: 'Author and train drills' },
+  { to: '/leaderboard', id: 'gc-leaderboard', label: 'Leaderboard', icon: 'decision', color: '#d97706', title: 'Leaderboard', sub: 'Operator rankings' },
+  { to: '/reports', id: 'gc-reports', label: 'Reports & AAR', icon: 'reports', color: '#06b6d4', title: 'Reports & AAR', sub: 'After-action reviews & evidence' },
+]
+
+// The SimCore shell wrapping the embedded GoalCert cyber platform. Same sidebar/topbar chrome
+// as the rest of SimCore; the content area hosts the cyber app under `.gc-root` (scoped styles).
+function CyberShell({ dom, collapsed, toggleNav, changeDomain }) {
+  const loc = useLocation()
+  const active =
+    CYBER_NAV.find(n => n.to !== '/' && loc.pathname.startsWith(n.to)) ||
+    (loc.pathname === '/' ? CYBER_NAV[0] : CYBER_NAV[0])
+
+  return (
+    <div data-mode="cyber" className={`app ${collapsed ? 'nav-collapsed' : ''}`}>
+      <aside className="sidebar no-print">
+        <div className="side-brand"><span className="dot">◆</span> <span className="brand-label">SimCore</span></div>
+        <button className="side-domain" onClick={changeDomain} title="Change domain">
+          <span className="nav-label">{dom.name}</span><span className="dom-swap">⇄</span>
+        </button>
+        <nav className="side-nav">
+          {CYBER_NAV.map(n => (
+            <NavLink key={n.id} to={n.to} end={n.to === '/'} title={n.label}
+              className={({ isActive }) => isActive ? 'on' : ''} style={{ '--nav': n.color }}>
+              <Icon name={n.icon} /> <span className="nav-label">{n.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <div className="side-foot">v0.1 · {dom.name}</div>
+      </aside>
+
+      <div className="main">
+        <header className="topbar2 no-print">
+          <button className="collapse-btn" onClick={toggleNav} title="Toggle sidebar">☰</button>
+          <div>
+            <div className="page-title">{active.title}</div>
+            <div className="page-sub">{active.sub}</div>
+          </div>
+          <div className="spacer" />
+          <div className="dom-chip" onClick={changeDomain} title="Change domain">{dom.name} ⇄</div>
+          <div className="avatar" title="Signed-in operator">OP</div>
+        </header>
+
+        <main className="page-cyber">
+          <CyberApp />
+        </main>
+      </div>
+    </div>
+  )
+}
 const EV_NAV_IDS = ['simulate', 'data', 'records']
 const GENERIC_NAV_IDS = ['dashboard', 'warroom', 'library', 'builder', 'simulation', 'decision', 'training', 'twin', 'reports', 'assumptions']
 
@@ -78,9 +140,15 @@ export default function App() {
   const pickDomain = (d) => { localStorage.setItem('simcore_app_domain', d.id); setAppDomain(d.id) }
   const changeDomain = () => { localStorage.removeItem('simcore_app_domain'); setAppDomain('') }
 
-  useEffect(() => { const d = DOMAINS.find(x => x.id === appDomain); if (d) setDomain(d.engine) }, [appDomain, setDomain])
+  // Cyber runs on its own (GoalCert) engine, not the SimCore engine — don't push it into the store.
+  useEffect(() => { const d = DOMAINS.find(x => x.id === appDomain); if (d && d.engine !== 'cyber') setDomain(d.engine) }, [appDomain, setDomain])
 
   if (!appDomain) return <DomainChooser onPick={pickDomain} />
+
+  if (appDomain === 'cyber') {
+    const dom = DOMAINS.find(d => d.id === 'cyber')
+    return <CyberShell dom={dom} collapsed={collapsed} toggleNav={toggleNav} changeDomain={changeDomain} />
+  }
 
   const dom = DOMAINS.find(d => d.id === appDomain) || DOMAINS[0]
   const ids = appDomain === 'ev' ? EV_NAV_IDS : GENERIC_NAV_IDS

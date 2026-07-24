@@ -767,3 +767,17 @@ body { background: var(--bg); }
 .tc-splash-score { font-size: 16px; font-weight: 700; }
 
 @media (max-width: 900px) { .tc-body { grid-template-columns: 1fr; } .tc-brief-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Embedded Cybersecurity (GoalCert) domain ──────────────────────────────
+   The cyber app renders under .gc-root (its styles are scoped there so they can't
+   repaint the SimCore shell). Fill the content area below the topbar and keep the
+   content inside the column — no horizontal spill, grids wrap instead of clipping. */
+.page-cyber { min-height: calc(100vh - 54px); overflow-x: hidden; }
+.gc-root { width: 100%; min-width: 0; min-height: calc(100vh - 54px); }
+/* Standard page padding (mirrors GoalCert's original layout); /play is full-bleed. */
+.gc-root .gc-embed { padding: 22px 26px; box-sizing: border-box; }
+.gc-root .gc-bleed { width: 100%; }
+/* Let grids/flex children shrink to the column instead of forcing overflow. */
+.gc-root .scenario-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.gc-root .grid-2, .gc-root .grid-3, .gc-root .stats-row { min-width: 0; }
+.gc-root .grid-2 > *, .gc-root .grid-3 > *, .gc-root .stats-row > *, .gc-root .scenario-card { min-width: 0; }

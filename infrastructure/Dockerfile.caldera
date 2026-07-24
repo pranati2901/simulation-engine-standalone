@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git golang-go gcc g++ make && \
+    rm -rf /var/lib/apt/lists/*
+
+# Clone Caldera with all plugins
+RUN git clone --depth 1 https://github.com/mitre/caldera.git --recursive /opt/caldera
+
+WORKDIR /opt/caldera
+
+# Install Python deps
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Enable stockpile + atomic + sandcat plugins
+RUN printf "plugins:\n  - stockpile\n  - atomic\n  - sandcat\n" > conf/local.yml
+
+EXPOSE 8888 7010 7012
+
+CMD ["python", "server.py", "--insecure"]

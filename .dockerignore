@@ -1,0 +1,15 @@
+# Root context is used by the gateway build (needs frontend/ and gateway/ only).
+# Keep frontend/.env — Vite embeds VITE_API_KEY from it at build time.
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/venv
+**/.venv
+.git
+frontend/dist
+frontend/.vite
+**/*.db
+docs
+data-layer
+cyber/backend
+*.bat

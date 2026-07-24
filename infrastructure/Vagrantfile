@@ -1,0 +1,170 @@
+# GoalCert VM Lab — 3-VM Active Directory Environment
+# Provisions: DC01 (Windows Server), WS01 (Windows 10), WAZUH (Ubuntu + Wazuh)
+#
+# Requirements:
+#   - VirtualBox 7+ (or VMware Desktop)
+#   - Vagrant 2.4+
+#   - ~14GB RAM available
+#   - Windows Server 2019 Vagrant box (see below)
+#
+# Usage:
+#   vagrant up          # provisions all 3 VMs
+#   vagrant ssh wazuh   # SSH into the Wazuh VM
+#   vagrant destroy -f  # tear down everything
+#
+# Note: Windows boxes are large (~6GB each). First `vagrant up` takes 30+ min.
+
+Vagrant.configure("2") do |config|
+
+  # ---- Shared network ----
+  # All VMs on the same private network (192.168.56.0/24)
+
+  # ============================================================
+  # DC01 — Windows Server 2019 Domain Controller
+  # ============================================================
+  config.vm.define "dc01" do |dc|
+    dc.vm.box = "gusztavvargadr/windows-server-2019-standard"
+    dc.vm.hostname = "DC01"
+    dc.vm.network "private_network", ip: "192.168.56.10"
+    dc.vm.communicator = "winrm"
+    dc.winrm.username = "vagrant"
+    dc.winrm.password = "vagrant"
+
+    dc.vm.provider "virtualbox" do |vb|
+      vb.name = "goalcert-dc01"
+      vb.memory = 4096
+      vb.cpus = 2
+      vb.gui = false
+    end
+
+    # Provision: Install AD DS, DNS, create domain
+    dc.vm.provision "shell", inline: <<-SHELL
+      # Install AD Domain Services
+      Install-WindowsFeature AD-Domain-Services -IncludeManagementTools
+
+      # Create forest (goalcert.local)
+      $securePassword = ConvertTo-SecureString "P@ssw0rd!" -AsPlainText -Force
+      Install-ADDSForest `
+        -DomainName "goalcert.local" `
+        -DomainNetbiosName "GOALCERT" `
+        -SafeModeAdministratorPassword $securePassword `
+        -InstallDns:$true `
+        -Force:$true
+
+      # Install Sysmon
+      $sysmonUrl = "https://download.sysinternals.com/files/Sysmon.zip"
+      Invoke-WebRequest -Uri $sysmonUrl -OutFile C:\\sysmon.zip
+      Expand-Archive C:\\sysmon.zip -DestinationPath C:\\Sysmon -Force
+
+      # Download SwiftOnSecurity Sysmon config
+      Invoke-WebRequest -Uri "https://raw.githubusercontent.com/SwiftOnSecurity/sysmon-config/master/sysmonconfig-export.xml" -OutFile C:\\Sysmon\\sysmonconfig.xml
+
+      # Install Sysmon with config
+      C:\\Sysmon\\Sysmon64.exe -accepteula -i C:\\Sysmon\\sysmonconfig.xml
+
+      # Create service accounts for Kerberoasting test
+      New-ADUser -Name "svc_sql" -SamAccountName "svc_sql" -AccountPassword $securePassword -Enabled $true -PasswordNeverExpires $true
+      Set-ADUser -Identity "svc_sql" -ServicePrincipalNames @{Add="MSSQLSvc/sql01.goalcert.local:1433"}
+
+      New-ADUser -Name "svc_web" -SamAccountName "svc_web" -AccountPassword $securePassword -Enabled $true -PasswordNeverExpires $true
+      Set-ADUser -Identity "svc_web" -ServicePrincipalNames @{Add="HTTP/web01.goalcert.local"}
+    SHELL
+  end
+
+  # ============================================================
+  # WS01 — Windows 10 Workstation (domain-joined victim)
+  # ============================================================
+  config.vm.define "ws01" do |ws|
+    ws.vm.box = "gusztavvargadr/windows-10"
+    ws.vm.hostname = "WS01"
+    ws.vm.network "private_network", ip: "192.168.56.20"
+    ws.vm.communicator = "winrm"
+    ws.winrm.username = "vagrant"
+    ws.winrm.password = "vagrant"
+
+    ws.vm.provider "virtualbox" do |vb|
+      vb.name = "goalcert-ws01"
+      vb.memory = 4096
+      vb.cpus = 2
+      vb.gui = false
+    end
+
+    ws.vm.provision "shell", inline: <<-SHELL
+      # Set DNS to DC01
+      $adapter = Get-NetAdapter | Where-Object Status -eq 'Up' | Select-Object -First 1
+      Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses "192.168.56.10"
+
+      # Join domain
+      $securePassword = ConvertTo-SecureString "P@ssw0rd!" -AsPlainText -Force
+      $cred = New-Object System.Management.Automation.PSCredential("GOALCERT\\vagrant", $securePassword)
+      Add-Computer -DomainName "goalcert.local" -Credential $cred -Force
+
+      # Install Sysmon
+      $sysmonUrl = "https://download.sysinternals.com/files/Sysmon.zip"
+      Invoke-WebRequest -Uri $sysmonUrl -OutFile C:\\sysmon.zip
+      Expand-Archive C:\\sysmon.zip -DestinationPath C:\\Sysmon -Force
+      Invoke-WebRequest -Uri "https://raw.githubusercontent.com/SwiftOnSecurity/sysmon-config/master/sysmonconfig-export.xml" -OutFile C:\\Sysmon\\sysmonconfig.xml
+      C:\\Sysmon\\Sysmon64.exe -accepteula -i C:\\Sysmon\\sysmonconfig.xml
+
+      # Install Atomic Red Team
+      IEX (IWR 'https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/install-atomicredteam.ps1' -UseBasicParsing)
+      Install-AtomicRedTeam -getAtomics -Force
+
+      # Enable WinRM for remote execution
+      winrm quickconfig -force
+      Enable-PSRemoting -Force
+      Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value "*" -Force
+    SHELL
+  end
+
+  # ============================================================
+  # WAZUH — Ubuntu 22.04 with Wazuh SIEM (Docker)
+  # ============================================================
+  config.vm.define "wazuh" do |wz|
+    wz.vm.box = "ubuntu/jammy64"
+    wz.vm.hostname = "wazuh"
+    wz.vm.network "private_network", ip: "192.168.56.30"
+
+    wz.vm.provider "virtualbox" do |vb|
+      vb.name = "goalcert-wazuh"
+      vb.memory = 6144
+      vb.cpus = 2
+    end
+
+    # Forward Wazuh Dashboard to host
+    wz.vm.network "forwarded_port", guest: 5601, host: 5601
+    wz.vm.network "forwarded_port", guest: 9200, host: 9200
+    wz.vm.network "forwarded_port", guest: 55000, host: 55000
+
+    wz.vm.provision "shell", inline: <<-SHELL
+      # Install Docker
+      apt-get update
+      apt-get install -y ca-certificates curl gnupg
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      apt-get update
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+      # Set vm.max_map_count for OpenSearch
+      sysctl -w vm.max_map_count=262144
+      echo "vm.max_map_count=262144" >> /etc/sysctl.conf
+
+      # Clone Wazuh Docker
+      git clone https://github.com/wazuh/wazuh-docker.git -b v4.9.0 /opt/wazuh-docker
+      cd /opt/wazuh-docker/single-node
+
+      # Generate certs and start
+      docker compose -f generate-indexer-certs.yml run --rm generator
+      docker compose up -d
+
+      echo ""
+      echo "======================================"
+      echo "  Wazuh SIEM is starting..."
+      echo "  Dashboard: https://192.168.56.30:5601"
+      echo "  User: admin / SecretPassword"
+      echo "======================================"
+    SHELL
+  end
+
+end

@@ -1,0 +1,59 @@
+# SimCore platform — one command brings up the whole thing:
+#   docker compose up --build   →   open http://localhost:8080
+#
+#   gateway (nginx)  : serves the SimCore SPA + routes to both engines (the only exposed port)
+#   simcore-api      : SimCore FastAPI engine (EV, etc.)            — /engine/*
+#   cyber-api        : Cybersecurity (GoalCert) FastAPI engine      — /api/*, /ws/*
+#
+# Both engines use SQLite persisted to named volumes. Swap GOALCERT_DATABASE_URL to a
+# Postgres URL (e.g. on RDS) for the production/AWS deployment — no code change needed.
+name: simcore-platform
+
+services:
+  simcore-api:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env            # SCENARIO_API_KEY (must match the frontend build) + ANTHROPIC_API_KEY
+    environment:
+      GOALCERT_DATABASE_URL: "sqlite:////data/simulation_engine.db"
+      PORT: "8002"
+    volumes:
+      - simcore-db:/data
+    expose:
+      - "8002"
+    restart: unless-stopped
+
+  cyber-api:
+    build:
+      context: ./cyber/backend
+    environment:
+      GOALCERT_DATABASE_URL: "sqlite+pysqlite:////data/goalcert.db"
+      GOALCERT_CORS_ORIGINS: '["*"]'
+      GOALCERT_SEED_ON_STARTUP: "true"
+      # Optional live-fire (Kali) range — driven on the HOST Docker daemon via the mounted socket.
+      GOALCERT_LAB_COMPOSE_FILE: "/infrastructure/docker-compose.lab.yml"
+    volumes:
+      - cyber-db:/data
+      # Drive the host Docker daemon (to run/see the opt-in Kali range). Off unless the range is started.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # The live-fire range's compose file + build contexts (Kali + vulnerable targets).
+      - ./infrastructure:/infrastructure:ro
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8090:80"
+    depends_on:
+      - simcore-api
+      - cyber-api
+    restart: unless-stopped
+
+volumes:
+  simcore-db:
+  cyber-db:

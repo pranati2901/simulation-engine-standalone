@@ -1,0 +1,42 @@
+{
+  "_comment": "GoalCert VM Bridge Configuration — maps modeled assets to real VMs",
+  "_usage": "Copy to bridge-config.json, fill in your VM IPs and credentials",
+
+  "execution_bridge": "atomic",
+  "detection_bridge": "wazuh",
+
+  "wazuh": {
+    "indexer_url": "https://192.168.56.30:9200",
+    "username": "admin",
+    "password": "SecretPassword",
+    "index_pattern": "wazuh-alerts-*",
+    "pipeline_delay_s": 60
+  },
+
+  "vm_bindings": {
+    "ws-ceo": {
+      "host": "192.168.56.20",
+      "port": 5986,
+      "protocol": "winrm",
+      "username": "vagrant",
+      "password": "vagrant",
+      "os": "windows"
+    },
+    "ws-finance": {
+      "host": "192.168.56.20",
+      "port": 5986,
+      "protocol": "winrm",
+      "username": "vagrant",
+      "password": "vagrant",
+      "os": "windows"
+    },
+    "dc-01": {
+      "host": "192.168.56.10",
+      "port": 5986,
+      "protocol": "winrm",
+      "username": "vagrant",
+      "password": "vagrant",
+      "os": "windows"
+    }
+  }
+}
